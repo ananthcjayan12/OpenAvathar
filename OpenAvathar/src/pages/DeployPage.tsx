@@ -29,7 +29,8 @@ export default function DeployPage() {
         setPodStatus,
         setUrls,
         logs,
-        addLog
+        addLog,
+        clearLogs
     } = useAppStore();
 
     const logEndRef = useRef<HTMLDivElement>(null);
@@ -42,7 +43,7 @@ export default function DeployPage() {
         logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
-    // Effect 1: Navigation guards (runs on mount and when apiKey/purpose change)
+    // Effect 1: Navigation guards
     useEffect(() => {
         if (!apiKey) {
             navigate('/');
@@ -54,7 +55,7 @@ export default function DeployPage() {
         }
     }, [apiKey, purpose, podId, navigate]);
 
-    // Effect 2: Deployment (runs once on mount if no podId exists)
+    // Effect 2: Deployment
     useEffect(() => {
         if (deploymentStarted.current || podId || !purpose || podStatus !== 'idle') {
             return;
@@ -104,9 +105,9 @@ export default function DeployPage() {
         };
 
         startDeployment();
-    }, []); // Empty deps - only run once on mount
+    }, []);
 
-    // Effect 3: Monitoring (reacts to podId changes)
+    // Effect 3: Monitoring
     useEffect(() => {
         if (!podId || !apiKey || podStatus === 'running') {
             return;
@@ -157,7 +158,7 @@ export default function DeployPage() {
         return () => {
             clearInterval(pollInterval);
         };
-    }, [podId, apiKey]); // React to podId changes
+    }, [podId, apiKey]);
 
     const handleStop = async () => {
         if (!podId || !apiKey) return;
@@ -196,40 +197,72 @@ export default function DeployPage() {
 
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 400px',
-                gap: '30px',
-                height: 'calc(100vh - 200px)', // Adjust based on header height
-                minHeight: '400px'
+                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+                gap: '24px',
+                alignItems: 'start'
             }}>
                 {/* Left Column: Log Viewer */}
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div style={{ minWidth: 0 }}>
                     <div className="card glass" style={{
-                        flexGrow: 1,
+                        height: '600px',
                         display: 'flex',
                         flexDirection: 'column',
                         padding: '0',
                         overflow: 'hidden'
                     }}>
-                        <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <ChevronRight size={16} color="var(--accent)" />
-                            <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Logs</span>
+                        <div style={{
+                            padding: '12px 20px',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderBottom: '1px solid var(--border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <ChevronRight size={16} color="var(--accent)" />
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Logs</span>
+                            </div>
+                            <button
+                                onClick={() => clearLogs()}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                                className="hover:bg-white/10"
+                            >
+                                <Terminal size={12} /> Clear
+                            </button>
                         </div>
                         <div style={{
                             flexGrow: 1,
                             background: '#0a0a0c',
                             padding: '20px',
                             fontFamily: '"Fira Code", monospace',
-                            fontSize: '0.85rem',
-                            lineHeight: '1.6',
+                            fontSize: '0.8rem',
+                            lineHeight: '1.5',
                             overflowY: 'auto',
-                            color: '#d1d1d1'
+                            color: '#d1d1d1',
+                            wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap'
                         }}>
                             {logs.length === 0 ? (
-                                <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Waiting for logs...</div>
+                                <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', opacity: 0.7 }}>Waiting for logs...</div>
                             ) : (
                                 logs.map((log, i) => (
-                                    <div key={i} style={{ marginBottom: '4px', whiteSpace: 'pre-wrap' }}>
-                                        <span style={{ color: 'var(--accent)', marginRight: '8px' }}>&gt;</span>
+                                    <div key={i} style={{
+                                        marginBottom: '6px',
+                                        borderLeft: log.includes('ERROR') || log.includes('Exception') ? '3px solid var(--error)' : 'none',
+                                        paddingLeft: log.includes('ERROR') || log.includes('Exception') ? '10px' : '0'
+                                    }}>
+                                        {!log.includes('ERROR') && !log.includes('Exception') && <span style={{ color: 'var(--accent)', marginRight: '8px', opacity: 0.5 }}>&gt;</span>}
                                         {log}
                                     </div>
                                 ))
@@ -239,8 +272,15 @@ export default function DeployPage() {
                     </div>
                 </div>
 
-                {/* Right Column: Status Card */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Right Column: Status Card (Fixed Width constraint via grid, but responsive) */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                    width: '100%',
+                    maxWidth: '400px', // Prevents it from getting too wide on large screens if it wraps
+                    justifySelf: 'start' // Aligns it to left if it wraps
+                }}>
                     <div className="card glass" style={{ padding: '30px', textAlign: 'center' }}>
                         <div style={{ width: '80px', height: '80px', margin: '0 auto 24px', position: 'relative' }}>
                             <AnimatePresence mode="wait">
@@ -337,4 +377,3 @@ export default function DeployPage() {
         </div>
     );
 }
-
