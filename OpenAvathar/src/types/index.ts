@@ -88,15 +88,23 @@ export interface GenerationStatus {
 /**
  * Workflow patch config
  */
+export type VideoOrientation = 'horizontal' | 'vertical';
+
 export interface Wan22Config {
     imageName: string;
     prompt: string;
     width: number;
     height: number;
+    orientation?: VideoOrientation;
+    maxFrames?: number;
+    audioCfgScale?: number;
 }
 
 export interface InfiniteTalkConfig {
     imageName: string;
     audioName: string;
     prompt: string;
+    orientation?: VideoOrientation;
+    maxFrames?: number;
+    audioCfgScale?: number;
 }

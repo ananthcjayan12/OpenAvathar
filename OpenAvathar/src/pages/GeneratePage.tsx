@@ -1,11 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Upload,
     Image as ImageIcon,
     Mic,
     Wand2,
-    Download,
     Loader2,
     CheckCircle2,
     AlertTriangle,
@@ -14,6 +13,7 @@ import {
 import { useAppStore } from '@/stores/appStore';
 import { comfyuiApi } from '@/services/comfyuiApi';
 import { workflowPatcher } from '@/services/workflowPatcher';
+import VideoPreview from '@/components/VideoPreview';
 
 export default function GeneratePage() {
     const {
@@ -24,7 +24,10 @@ export default function GeneratePage() {
         generationStatus,
         setGenerationStatus,
         outputVideo,
-        setOutputVideo
+        setOutputVideo,
+        videoOrientation,
+        maxFrames,
+        audioCfgScale
     } = useAppStore();
 
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -35,6 +38,18 @@ export default function GeneratePage() {
 
     const imageInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
+
+    // Debug logging for button state
+    useEffect(() => {
+        console.log('Generate Button State:', {
+            comfyuiUrl: !!comfyuiUrl,
+            purpose,
+            selectedImage: !!selectedImage,
+            selectedAudio: !!selectedAudio,
+            generationStatus,
+            isReady: comfyuiUrl && selectedImage && (purpose === 'wan2.2' || (purpose === 'infinitetalk' && selectedAudio))
+        });
+    }, [comfyuiUrl, purpose, selectedImage, selectedAudio, generationStatus]);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -61,21 +76,24 @@ export default function GeneratePage() {
 
         try {
             // 1. Upload Files
-            const imageFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedImage, 'image');
+            const imageFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedImage);
 
             let audioFilename = '';
             if (purpose === 'infinitetalk' && selectedAudio) {
-                audioFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedAudio, 'audio');
+                audioFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedAudio);
             }
 
-            // 2. Patch Workflow
+            // 2. Patch Workflow with generation settings
             setGenerationStatus('queuing');
             const patchedWorkflow = await workflowPatcher.patchWorkflow(purpose!, {
                 imageName: imageFilename,
                 audioName: audioFilename,
                 prompt: prompt || 'high quality video',
-                width: 768,
-                height: 768
+                width: videoOrientation === 'horizontal' ? 1024 : 576,
+                height: videoOrientation === 'horizontal' ? 576 : 1024,
+                orientation: videoOrientation,
+                maxFrames: maxFrames,
+                audioCfgScale: audioCfgScale
             });
 
             // 3. Queue Workflow
@@ -127,7 +145,19 @@ export default function GeneratePage() {
         }, 5000);
     };
 
-    const isReady = selectedImage && (purpose === 'wan2.2' || selectedAudio);
+    // Check if all required inputs are ready
+    const isReady = Boolean(
+        comfyuiUrl &&
+        selectedImage &&
+        (purpose === 'wan2.2' || (purpose === 'infinitetalk' && selectedAudio))
+    );
+
+    const getReadyStatus = () => {
+        if (!comfyuiUrl) return 'Waiting for Pod connection. Go back to Deploy page if it\'s not ready.';
+        if (!selectedImage) return 'Please upload an image.';
+        if (purpose === 'infinitetalk' && !selectedAudio) return 'Please upload an audio file for talking head.';
+        return null;
+    };
 
     return (
         <div className="container" style={{ padding: '60px 20px', maxWidth: '1400px' }}>
@@ -243,6 +273,80 @@ export default function GeneratePage() {
                         <div className="card glass" style={{ padding: '30px', display: 'flex', flexDirection: 'column' }}>
                             <h3 style={{ fontSize: '1.1rem', marginBottom: '20px' }}>Generation Settings</h3>
 
+                            {/* Video Orientation */}
+                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                Video Orientation
+                            </label>
+                            <div className="glass" style={{ display: 'flex', padding: '6px', gap: '6px', background: 'var(--bg-secondary)', marginBottom: '20px' }}>
+                                <button
+                                    onClick={() => useAppStore.getState().setVideoOrientation('horizontal')}
+                                    className="btn"
+                                    style={{
+                                        flex: 1,
+                                        background: videoOrientation === 'horizontal' ? 'var(--accent)' : 'transparent',
+                                        color: videoOrientation === 'horizontal' ? 'white' : 'var(--text-secondary)',
+                                        padding: '10px',
+                                        fontSize: '0.9rem',
+                                        border: 'none'
+                                    }}
+                                >
+                                    🖥️ Horizontal
+                                </button>
+                                <button
+                                    onClick={() => useAppStore.getState().setVideoOrientation('vertical')}
+                                    className="btn"
+                                    style={{
+                                        flex: 1,
+                                        background: videoOrientation === 'vertical' ? 'var(--accent)' : 'transparent',
+                                        color: videoOrientation === 'vertical' ? 'white' : 'var(--text-secondary)',
+                                        padding: '10px',
+                                        fontSize: '0.9rem',
+                                        border: 'none'
+                                    }}
+                                >
+                                    📱 Vertical
+                                </button>
+                            </div>
+
+                            {/* Max Frames */}
+                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Max Frames</span>
+                                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{maxFrames}</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="30"
+                                max="240"
+                                step="10"
+                                value={maxFrames}
+                                onChange={(e) => useAppStore.getState().setMaxFrames(Number(e.target.value))}
+                                style={{
+                                    width: '100%',
+                                    marginBottom: '20px',
+                                    accentColor: 'var(--accent)'
+                                }}
+                            />
+
+                            {/* Audio CFG Scale */}
+                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Audio CFG Scale</span>
+                                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{audioCfgScale.toFixed(1)}</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="1.0"
+                                max="7.0"
+                                step="0.5"
+                                value={audioCfgScale}
+                                onChange={(e) => useAppStore.getState().setAudioCfgScale(Number(e.target.value))}
+                                style={{
+                                    width: '100%',
+                                    marginBottom: '20px',
+                                    accentColor: 'var(--accent)'
+                                }}
+                            />
+
+                            {/* Prompt */}
                             <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
                                 Prompt (Optional)
                             </label>
@@ -265,10 +369,27 @@ export default function GeneratePage() {
                             />
 
                             <div style={{ marginTop: 'auto' }}>
+                                {!isReady && (
+                                    <p style={{
+                                        fontSize: '0.85rem',
+                                        color: 'var(--text-secondary)',
+                                        textAlign: 'center',
+                                        marginBottom: '12px',
+                                        padding: '8px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        borderRadius: '6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}>
+                                        <AlertTriangle size={14} /> {getReadyStatus()}
+                                    </p>
+                                )}
                                 <button
                                     onClick={handleGenerate}
                                     disabled={!isReady}
-                                    className="btn btn-primary"
+                                    className={`btn ${isReady ? 'btn-primary' : ''}`}
                                     style={{
                                         width: '100%',
                                         padding: '16px',
@@ -276,7 +397,12 @@ export default function GeneratePage() {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '10px'
+                                        gap: '10px',
+                                        opacity: isReady ? 1 : 0.5,
+                                        cursor: isReady ? 'pointer' : 'not-allowed',
+                                        background: isReady ? 'var(--accent)' : 'var(--bg-secondary)',
+                                        color: isReady ? 'white' : 'var(--text-secondary)',
+                                        border: isReady ? 'none' : '1px solid var(--border)'
                                     }}
                                 >
                                     <Play size={20} /> Generate Video
@@ -329,24 +455,20 @@ export default function GeneratePage() {
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '24px' }}>Video Generated!</h3>
 
-                                    {outputVideo && (
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <video
-                                                src={outputVideo}
-                                                controls
-                                                autoPlay
-                                                loop
-                                                style={{ width: '100%', maxWidth: '600px', borderRadius: '12px', marginBottom: '16px' }}
-                                            />
-                                            <a
-                                                href={outputVideo}
-                                                download
-                                                className="btn btn-primary"
-                                                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
-                                            >
-                                                <Download size={18} /> Download Video
-                                            </a>
-                                        </div>
+                                    {outputVideo && comfyuiUrl && (
+                                        <VideoPreview
+                                            comfyuiUrl={comfyuiUrl}
+                                            filename={outputVideo}
+                                            onClose={() => {
+                                                setGenerationStatus('idle');
+                                                setOutputVideo(null);
+                                                setCurrentPromptId(null);
+                                                setSelectedImage(null);
+                                                setSelectedAudio(null);
+                                                setImagePreview(null);
+                                                setPrompt('');
+                                            }}
+                                        />
                                     )}
 
                                     <button

@@ -194,10 +194,22 @@ export default function DeployPage() {
                 )}
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 400px',
+                gap: '30px',
+                height: 'calc(100vh - 200px)', // Adjust based on header height
+                minHeight: '400px'
+            }}>
                 {/* Left Column: Log Viewer */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div className="card glass" style={{ flexGrow: 1, minHeight: '500px', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="card glass" style={{
+                        flexGrow: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '0',
+                        overflow: 'hidden'
+                    }}>
                         <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ChevronRight size={16} color="var(--accent)" />
                             <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Logs</span>

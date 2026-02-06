@@ -18,6 +18,11 @@ interface AppState {
     comfyuiUrl: string | null;
     logServerUrl: string | null;
 
+    // Generation Settings
+    videoOrientation: 'horizontal' | 'vertical';
+    maxFrames: number;
+    audioCfgScale: number;
+
     // Generation State
     currentPromptId: string | null;
     generationStatus: GenerationStatus['step'];
@@ -35,11 +40,15 @@ interface AppState {
     setPodId: (id: string | null) => void;
     setPodStatus: (status: AppState['podStatus']) => void;
     setUrls: (comfyui: string | null, logServer: string | null) => void;
+    setVideoOrientation: (orientation: 'horizontal' | 'vertical') => void;
+    setMaxFrames: (frames: number) => void;
+    setAudioCfgScale: (scale: number) => void;
     setGenerationStatus: (status: AppState['generationStatus']) => void;
     setCurrentPromptId: (id: string | null) => void;
     setOutputVideo: (url: string | null) => void;
     addLog: (line: string) => void;
     clearLogs: () => void;
+    clearAuth: () => void;
     reset: () => void;
 }
 
@@ -56,6 +65,9 @@ export const useAppStore = create<AppState>()(
             podStatus: 'idle',
             comfyuiUrl: null,
             logServerUrl: null,
+            videoOrientation: 'horizontal',
+            maxFrames: 120,
+            audioCfgScale: 3.5,
             currentPromptId: null,
             generationStatus: 'idle',
             outputVideo: null,
@@ -70,6 +82,9 @@ export const useAppStore = create<AppState>()(
             setPodId: (podId) => set({ podId }),
             setPodStatus: (podStatus) => set({ podStatus }),
             setUrls: (comfyuiUrl, logServerUrl) => set({ comfyuiUrl, logServerUrl }),
+            setVideoOrientation: (videoOrientation) => set({ videoOrientation }),
+            setMaxFrames: (maxFrames) => set({ maxFrames }),
+            setAudioCfgScale: (audioCfgScale) => set({ audioCfgScale }),
             setGenerationStatus: (generationStatus) => set({ generationStatus }),
             setCurrentPromptId: (currentPromptId: string | null) => set({ currentPromptId }),
             setOutputVideo: (outputVideo) => set({ outputVideo }),
@@ -78,6 +93,21 @@ export const useAppStore = create<AppState>()(
                     logs: [...state.logs.slice(-999), line],
                 })),
             clearLogs: () => set({ logs: [] }),
+            clearAuth: () => {
+                set({
+                    apiKey: null,
+                    isValidated: false,
+                    podId: null,
+                    podStatus: 'idle',
+                    comfyuiUrl: null,
+                    logServerUrl: null,
+                    currentPromptId: null,
+                    generationStatus: 'idle',
+                    outputVideo: null,
+                    logs: [],
+                });
+                localStorage.removeItem('open-avathar-storage');
+            },
             reset: () =>
                 set({
                     apiKey: null,
@@ -104,6 +134,11 @@ export const useAppStore = create<AppState>()(
                 cloudType: state.cloudType,
                 gpuType: state.gpuType,
                 podId: state.podId,
+                comfyuiUrl: state.comfyuiUrl,
+                logServerUrl: state.logServerUrl,
+                videoOrientation: state.videoOrientation,
+                maxFrames: state.maxFrames,
+                audioCfgScale: state.audioCfgScale,
             }),
         }
     )
