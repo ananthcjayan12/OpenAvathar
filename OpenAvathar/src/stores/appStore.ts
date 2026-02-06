@@ -96,11 +96,14 @@ export const useAppStore = create<AppState>()(
         {
             name: 'open-avathar-storage',
             storage: createJSONStorage(() => localStorage),
-            // Only persist non-sensitive configuration data
+            // Only persist session and config data
             partialize: (state) => ({
+                apiKey: state.apiKey,
+                isValidated: state.isValidated,
                 purpose: state.purpose,
                 cloudType: state.cloudType,
                 gpuType: state.gpuType,
+                podId: state.podId,
             }),
         }
     )

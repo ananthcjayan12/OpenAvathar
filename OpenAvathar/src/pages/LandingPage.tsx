@@ -28,7 +28,20 @@ export default function LandingPage() {
             if (isValid) {
                 setApiKey(keyInput.trim());
                 setValidated(true);
-                navigate('/setup');
+
+                // Check for existing pods
+                const pods = await runpodApi.getPods(keyInput.trim());
+                const activePod = pods.find(p =>
+                    p.name.startsWith('OpenAvathar-') &&
+                    p.desiredStatus !== 'TERMINATED'
+                );
+
+                if (activePod) {
+                    useAppStore.getState().setPodId(activePod.id);
+                    navigate('/deploy');
+                } else {
+                    navigate('/setup');
+                }
             } else {
                 setError('Invalid API Key. Please check and try again.');
             }

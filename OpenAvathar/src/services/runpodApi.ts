@@ -123,6 +123,36 @@ class RunPodService {
   }
 
   /**
+   * Fetches all pods for the current user
+   */
+  async getPods(apiKey: string): Promise<Pod[]> {
+    const query = `
+      query {
+        myself {
+          pods {
+            id
+            name
+            desiredStatus
+            imageName
+            runtime {
+              uptimeInSeconds
+              ports {
+                ip
+                isIpPublic
+                privatePort
+                publicPort
+                type
+              }
+            }
+          }
+        }
+      }
+    `;
+    const data = await this.graphqlRequest(apiKey, query);
+    return data.myself.pods;
+  }
+
+  /**
    * Gets current status of a pod
    */
   async getPodStatus(apiKey: string, podId: string): Promise<Pod> {

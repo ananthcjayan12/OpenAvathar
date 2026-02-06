@@ -2,9 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
 import LandingPage from './pages/LandingPage';
 import SetupPage from './pages/SetupPage';
+import DeployPage from './pages/DeployPage';
 
 // Placeholder components for guarded routes
-const DeployPlaceholder = () => <div className="container">Deploy Page (Coming Soon)</div>;
 const GeneratePlaceholder = () => <div className="container">Generate Page (Coming Soon)</div>;
 
 function App() {
@@ -22,7 +22,7 @@ function App() {
         />
         <Route
           path="/deploy"
-          element={apiKey ? <DeployPlaceholder /> : <Navigate to="/" />}
+          element={apiKey ? <DeployPage /> : <Navigate to="/" />}
         />
         <Route
           path="/generate"
