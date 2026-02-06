@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
-import LandingPage from '@/pages/LandingPage';
+import LandingPage from './pages/LandingPage';
+import SetupPage from './pages/SetupPage';
 
 // Placeholder components for guarded routes
-const SetupPlaceholder = () => <div className="container">Setup Page (Coming Soon)</div>;
 const DeployPlaceholder = () => <div className="container">Deploy Page (Coming Soon)</div>;
 const GeneratePlaceholder = () => <div className="container">Generate Page (Coming Soon)</div>;
 
@@ -18,7 +18,7 @@ function App() {
         {/* Guarded Routes */}
         <Route
           path="/setup"
-          element={apiKey ? <SetupPlaceholder /> : <Navigate to="/" />}
+          element={apiKey ? <SetupPage /> : <Navigate to="/" />}
         />
         <Route
           path="/deploy"
