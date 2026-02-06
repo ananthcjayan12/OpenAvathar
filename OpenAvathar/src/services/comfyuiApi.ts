@@ -145,10 +145,72 @@ class ComfyUIService {
     }
 
     /**
+     * Fetches all output videos from ComfyUI history
+     */
+    async getOutputVideos(comfyuiUrl: string): Promise<Array<{ id: string; filename: string; url: string; timestamp: number }>> {
+        try {
+            const response = await axios.get(`${comfyuiUrl}/history`, {
+                timeout: 10000,
+            });
+
+            const videos: Array<{ id: string; filename: string; url: string; timestamp: number }> = [];
+            const history = response.data;
+
+            // Iterate through all prompt IDs in history
+            for (const promptId in history) {
+                const item = history[promptId];
+                const outputs = item.outputs;
+
+                if (!outputs) continue;
+
+                // Look for video outputs in each node
+                for (const nodeId in outputs) {
+                    const nodeOutput = outputs[nodeId];
+                    const media = nodeOutput.gifs?.[0] || nodeOutput.videos?.[0];
+
+                    if (media && media.filename) {
+                        const filename = media.subfolder ? `${media.subfolder}/${media.filename}` : media.filename;
+                        const url = this.getOutputUrl(comfyuiUrl, filename);
+
+                        // Use prompt creation time if available, otherwise use current time
+                        const timestamp = item.prompt?.[1] ? item.prompt[1] * 1000 : Date.now();
+
+                        console.log('Found video:', { promptId, filename, url });
+
+                        videos.push({
+                            id: promptId,
+                            filename,
+                            url,
+                            timestamp
+                        });
+                    }
+                }
+            }
+
+            // Sort by timestamp, newest first
+            return videos.sort((a, b) => b.timestamp - a.timestamp);
+        } catch (error) {
+            console.error('Failed to fetch output videos:', error);
+            return [];
+        }
+    }
+
+    /**
      * Helper to construct the view/download URL for an output file
      */
     getOutputUrl(comfyuiUrl: string, filename: string): string {
-        return `${comfyuiUrl}/view?filename=${encodeURIComponent(filename)}&type=output`;
+        // Check if filename contains a subfolder
+        const parts = filename.split('/');
+
+        if (parts.length > 1) {
+            // Has subfolder - pass subfolder and filename separately
+            const subfolder = parts.slice(0, -1).join('/');
+            const file = parts[parts.length - 1];
+            return `${comfyuiUrl}/view?filename=${encodeURIComponent(file)}&subfolder=${encodeURIComponent(subfolder)}&type=output`;
+        } else {
+            // No subfolder - just pass filename
+            return `${comfyuiUrl}/view?filename=${encodeURIComponent(filename)}&type=output`;
+        }
     }
 }
 

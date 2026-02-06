@@ -8,7 +8,9 @@ import {
     Loader2,
     CheckCircle2,
     AlertTriangle,
-    Play
+    Play,
+    Film,
+    Trash2
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { comfyuiApi } from '@/services/comfyuiApi';
@@ -27,7 +29,10 @@ export default function GeneratePage() {
         setOutputVideo,
         videoOrientation,
         maxFrames,
-        audioCfgScale
+        audioCfgScale,
+        generatedVideos,
+        addGeneratedVideo,
+        clearVideoHistory
     } = useAppStore();
 
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -35,9 +40,50 @@ export default function GeneratePage() {
     const [prompt, setPrompt] = useState('');
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [allVideos, setAllVideos] = useState<Array<{ id: string; filename: string; url: string; timestamp: number; orientation?: 'horizontal' | 'vertical'; purpose?: string }>>([]);
+    const [isLoadingVideos, setIsLoadingVideos] = useState(false);
 
     const imageInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
+
+    // Fetch videos from ComfyUI on mount
+    useEffect(() => {
+        const fetchVideos = async () => {
+            if (!comfyuiUrl) return;
+
+            setIsLoadingVideos(true);
+            try {
+                const comfyVideos = await comfyuiApi.getOutputVideos(comfyuiUrl);
+
+                // Merge with stored videos, avoiding duplicates
+                const storedVideoIds = new Set(generatedVideos.map(v => v.id));
+                const newVideos = comfyVideos.filter(v => !storedVideoIds.has(v.id));
+
+                // Combine stored videos (with metadata) and new videos from ComfyUI
+                const combined = [
+                    ...generatedVideos.map(v => ({
+                        id: v.id,
+                        filename: v.filename,
+                        url: v.url,
+                        timestamp: v.timestamp,
+                        orientation: v.orientation,
+                        purpose: v.purpose
+                    })),
+                    ...newVideos
+                ];
+
+                // Sort by timestamp
+                combined.sort((a, b) => b.timestamp - a.timestamp);
+                setAllVideos(combined);
+            } catch (err) {
+                console.error('Failed to fetch videos:', err);
+            } finally {
+                setIsLoadingVideos(false);
+            }
+        };
+
+        fetchVideos();
+    }, [comfyuiUrl, generatedVideos]);
 
     // Debug logging for button state
     useEffect(() => {
@@ -127,6 +173,16 @@ export default function GeneratePage() {
                     if (outputFilename) {
                         const videoUrl = comfyuiApi.getOutputUrl(comfyuiUrl!, outputFilename);
                         setOutputVideo(videoUrl);
+
+                        // Add to video history
+                        addGeneratedVideo({
+                            id: promptId,
+                            filename: outputFilename,
+                            url: videoUrl,
+                            timestamp: Date.now(),
+                            orientation: videoOrientation,
+                            purpose: purpose!
+                        });
                     }
                 } else if (status.status === 'failed') {
                     clearInterval(poll);
@@ -513,6 +569,109 @@ export default function GeneratePage() {
                     </motion.div>
                 )}
             </div>
+
+            {/* Gallery Section */}
+            {(allVideos.length > 0 || isLoadingVideos) && (
+                <div style={{ marginTop: '60px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                        <h2 style={{ fontSize: '2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Film size={32} />
+                            Video Gallery
+                            {isLoadingVideos && (
+                                <Loader2 size={24} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                            )}
+                        </h2>
+                        {allVideos.length > 0 && (
+                            <button
+                                onClick={() => {
+                                    if (confirm('Are you sure you want to clear all video history?')) {
+                                        clearVideoHistory();
+                                        setAllVideos([]);
+                                    }
+                                }}
+                                className="btn btn-secondary"
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                            >
+                                <Trash2 size={18} />
+                                Clear History
+                            </button>
+                        )}
+                    </div>
+
+                    {isLoadingVideos && allVideos.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+                            <Loader2 size={48} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto 16px' }} />
+                            <p>Loading videos from ComfyUI...</p>
+                        </div>
+                    ) : allVideos.length === 0 ? (
+                        <div className="card glass" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+                            <Film size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+                            <p>No videos generated yet. Generate your first video above!</p>
+                        </div>
+                    ) : (
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                            gap: '24px'
+                        }}>
+                            {allVideos.map((video) => (
+                                <motion.div
+                                    key={video.id}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="card glass"
+                                    style={{
+                                        padding: '16px',
+                                        cursor: 'pointer',
+                                        transition: 'transform 0.2s',
+                                    }}
+                                    whileHover={{ scale: 1.02 }}
+                                >
+                                    <div style={{
+                                        position: 'relative',
+                                        width: '100%',
+                                        backgroundColor: 'var(--bg-secondary)',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        marginBottom: '12px'
+                                    }}>
+                                        <video
+                                            src={video.url}
+                                            style={{
+                                                width: '100%',
+                                                height: 'auto',
+                                                display: 'block',
+                                                maxHeight: '600px',
+                                                objectFit: 'contain'
+                                            }}
+                                            controls
+                                            preload="metadata"
+                                        />
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                                                {video.purpose === 'wan2.2' ? 'WAN 2.2' : video.purpose === 'infinitetalk' ? 'InfiniteTalk' : 'Generated Video'}
+                                            </span>
+                                            {video.orientation && (
+                                                <span>
+                                                    {video.orientation === 'horizontal' ? '🖥️ Horizontal' : '📱 Vertical'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                                            {new Date(video.timestamp).toLocaleString()}
+                                        </div>
+                                        <div style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '4px', wordBreak: 'break-all' }}>
+                                            {video.filename}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

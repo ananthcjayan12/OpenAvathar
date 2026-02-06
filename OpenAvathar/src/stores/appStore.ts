@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Purpose, CloudType, GenerationStatus } from '../types';
 
+export interface GeneratedVideo {
+    id: string;
+    filename: string;
+    url: string;
+    timestamp: number;
+    orientation: 'horizontal' | 'vertical';
+    purpose: Purpose;
+}
+
 interface AppState {
     // Auth (Not persisted)
     apiKey: string | null;
@@ -28,6 +37,9 @@ interface AppState {
     generationStatus: GenerationStatus['step'];
     outputVideo: string | null;
 
+    // Video History
+    generatedVideos: GeneratedVideo[];
+
     // Logs
     logs: string[];
 
@@ -46,6 +58,8 @@ interface AppState {
     setGenerationStatus: (status: AppState['generationStatus']) => void;
     setCurrentPromptId: (id: string | null) => void;
     setOutputVideo: (url: string | null) => void;
+    addGeneratedVideo: (video: GeneratedVideo) => void;
+    clearVideoHistory: () => void;
     addLog: (line: string) => void;
     clearLogs: () => void;
     clearAuth: () => void;
@@ -71,6 +85,7 @@ export const useAppStore = create<AppState>()(
             currentPromptId: null,
             generationStatus: 'idle',
             outputVideo: null,
+            generatedVideos: [],
             logs: [],
 
             // Actions
@@ -88,6 +103,11 @@ export const useAppStore = create<AppState>()(
             setGenerationStatus: (generationStatus) => set({ generationStatus }),
             setCurrentPromptId: (currentPromptId: string | null) => set({ currentPromptId }),
             setOutputVideo: (outputVideo) => set({ outputVideo }),
+            addGeneratedVideo: (video) =>
+                set((state) => ({
+                    generatedVideos: [video, ...state.generatedVideos],
+                })),
+            clearVideoHistory: () => set({ generatedVideos: [] }),
             addLog: (line) =>
                 set((state) => ({
                     logs: [...state.logs.slice(-999), line],
@@ -139,6 +159,7 @@ export const useAppStore = create<AppState>()(
                 videoOrientation: state.videoOrientation,
                 maxFrames: state.maxFrames,
                 audioCfgScale: state.audioCfgScale,
+                generatedVideos: state.generatedVideos,
             }),
         }
     )
