@@ -10,7 +10,6 @@ import {
     StopCircle,
     Info,
     Rocket,
-    ChevronRight,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { runpodApi } from '@/services/runpodApi';
@@ -74,8 +73,7 @@ export default function DeployPage() {
                 }
 
                 // Clear old logs
-                const { clearLogs } = useAppStore.getState();
-                clearLogs();
+                useAppStore.getState().clearLogs();
 
                 setPodStatus('deploying');
                 setDeploymentStep('Requesting GPU Pod from RunPod...');
@@ -178,29 +176,35 @@ export default function DeployPage() {
 
     return (
         <div className="container" style={{ padding: '40px 20px', maxWidth: '1400px' }}>
-            <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
+            <header className="flex-between flex-col-mobile gap-4" style={{ marginBottom: '32px', alignItems: 'flex-end' }}>
+                <div style={{ width: '100%' }}>
                     <h1 className="text-gradient" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <Terminal /> GPU Pod Management
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-secondary">
                         {podId ? `Pod ID: ${podId}` : 'Initializing deployment...'}
                     </p>
                 </div>
 
                 {podStatus === 'running' && (
-                    <button onClick={handleStop} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--error)' }}>
+                    <button onClick={handleStop} className="btn btn-secondary" style={{ color: 'var(--error)', borderColor: 'rgba(239,68,68,0.3)' }}>
                         <StopCircle size={18} /> Terminate Pod
                     </button>
                 )}
             </header>
 
-            <div style={{
+            <div className="grid-responsive" style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+                gridTemplateColumns: '1fr 400px',
                 gap: '24px',
                 alignItems: 'start'
             }}>
+                <style>{`
+                    @media (max-width: 960px) {
+                        .grid-responsive { grid-template-columns: 1fr !important; }
+                    }
+                `}</style>
+
                 {/* Left Column: Log Viewer */}
                 <div style={{ minWidth: 0 }}>
                     <div className="card glass" style={{
@@ -208,61 +212,59 @@ export default function DeployPage() {
                         display: 'flex',
                         flexDirection: 'column',
                         padding: '0',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        background: '#09090b', // Deep black for better contrast
+                        border: '1px solid var(--border)'
                     }}>
                         <div style={{
-                            padding: '12px 20px',
-                            background: 'rgba(255,255,255,0.05)',
+                            padding: '10px 16px',
+                            background: 'rgba(255,255,255,0.03)',
                             borderBottom: '1px solid var(--border)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between'
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ChevronRight size={16} color="var(--accent)" />
-                                <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Logs</span>
+                            <div className="flex-center gap-2">
+                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></div>
+                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }}></div>
+                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }}></div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginLeft: '8px' }}>LIVE LOGS</span>
                             </div>
                             <button
                                 onClick={() => clearLogs()}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'var(--text-secondary)',
-                                    fontSize: '0.75rem',
-                                    cursor: 'pointer',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px'
-                                }}
-                                className="hover:bg-white/10"
+                                className="btn-icon"
+                                style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px' }}
                             >
                                 <Terminal size={12} /> Clear
                             </button>
                         </div>
                         <div style={{
                             flexGrow: 1,
-                            background: '#0a0a0c',
                             padding: '20px',
-                            fontFamily: '"Fira Code", monospace',
-                            fontSize: '0.8rem',
-                            lineHeight: '1.5',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.85rem',
+                            lineHeight: '1.6',
                             overflowY: 'auto',
-                            color: '#d1d1d1',
+                            color: '#e2e8f0',
                             wordBreak: 'break-word',
                             whiteSpace: 'pre-wrap'
                         }}>
                             {logs.length === 0 ? (
-                                <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', opacity: 0.7 }}>Waiting for logs...</div>
+                                <div style={{ color: 'var(--text-tertiary)', fontStyle: 'italic', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                    <Loader2 className="animate-spin" style={{ marginBottom: '16px', opacity: 0.5 }} />
+                                    <span>Waiting for logs stream...</span>
+                                </div>
                             ) : (
                                 logs.map((log, i) => (
                                     <div key={i} style={{
-                                        marginBottom: '6px',
-                                        borderLeft: log.includes('ERROR') || log.includes('Exception') ? '3px solid var(--error)' : 'none',
-                                        paddingLeft: log.includes('ERROR') || log.includes('Exception') ? '10px' : '0'
+                                        marginBottom: '4px',
+                                        borderLeft: log.includes('ERROR') || log.includes('Exception') ? '3px solid var(--error)' : '3px solid transparent',
+                                        paddingLeft: '12px',
+                                        color: log.includes('ERROR') ? '#fca5a5' : log.includes('warning') ? '#fcd34d' : 'inherit'
                                     }}>
-                                        {!log.includes('ERROR') && !log.includes('Exception') && <span style={{ color: 'var(--accent)', marginRight: '8px', opacity: 0.5 }}>&gt;</span>}
+                                        <span style={{ color: 'var(--text-tertiary)', marginRight: '12px', userSelect: 'none', fontSize: '0.7rem' }}>
+                                            {new Date().toLocaleTimeString()}
+                                        </span>
                                         {log}
                                     </div>
                                 ))
@@ -272,45 +274,41 @@ export default function DeployPage() {
                     </div>
                 </div>
 
-                {/* Right Column: Status Card (Fixed Width constraint via grid, but responsive) */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '20px',
-                    width: '100%',
-                    maxWidth: '400px', // Prevents it from getting too wide on large screens if it wraps
-                    justifySelf: 'start' // Aligns it to left if it wraps
-                }}>
-                    <div className="card glass" style={{ padding: '30px', textAlign: 'center' }}>
-                        <div style={{ width: '80px', height: '80px', margin: '0 auto 24px', position: 'relative' }}>
+                {/* Right Column: Status Card */}
+                <div className="flex-col gap-4">
+                    <div className="card glass-panel" style={{ padding: '32px', textAlign: 'center', background: 'var(--bg-secondary)' }}>
+                        <div style={{ width: '100px', height: '100px', margin: '0 auto 24px', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            {/* Animated Status Rings */}
                             <AnimatePresence mode="wait">
                                 {podStatus === 'idle' || podStatus === 'deploying' ? (
                                     <motion.div
                                         key="loading"
-                                        initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        exit={{ scale: 1.2, opacity: 0 }}
-                                        style={{ width: '100%', height: '100%' }}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        style={{ position: 'relative', width: '100%', height: '100%' }}
                                     >
-                                        <Loader2 size={80} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                                        <div style={{ position: 'absolute', inset: 0, border: '4px solid var(--bg-tertiary)', borderRadius: '50%' }}></div>
+                                        <div style={{ position: 'absolute', inset: 0, border: '4px solid var(--accent)', borderRadius: '50%', borderTopColor: 'transparent', animation: 'spin 1.5s linear infinite' }}></div>
+                                        <Loader2 size={40} className="animate-spin" style={{ position: 'absolute', top: '30px', left: '30px', color: 'var(--accent)' }} />
                                     </motion.div>
                                 ) : podStatus === 'running' ? (
                                     <motion.div
                                         key="running"
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+                                        style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--success)', boxShadow: '0 0 30px rgba(16, 185, 129, 0.2)' }}
                                     >
-                                        <CheckCircle2 size={40} />
+                                        <CheckCircle2 size={50} />
                                     </motion.div>
                                 ) : (
                                     <motion.div
                                         key="failed"
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+                                        style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}
                                     >
-                                        <AlertTriangle size={40} />
+                                        <AlertTriangle size={50} />
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -318,10 +316,10 @@ export default function DeployPage() {
 
                         <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>{deploymentStep}</h3>
                         {error && (
-                            <p style={{ color: 'var(--error)', fontSize: '0.85rem', marginBottom: '16px' }}>{error}</p>
+                            <p style={{ color: 'var(--error)', fontSize: '0.85rem', marginBottom: '16px', background: 'rgba(239,68,68,0.1)', padding: '8px', borderRadius: '8px' }}>{error}</p>
                         )}
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
-                            {podStatus === 'deploying' ? 'This typically takes 2-3 minutes.' : podStatus === 'running' ? 'All systems operational.' : 'There was an issue spinning up your pod.'}
+                        <p className="text-secondary" style={{ fontSize: '0.9rem', marginBottom: '24px' }}>
+                            {podStatus === 'deploying' ? 'This typically takes 2-3 minutes. Grab a coffee.' : podStatus === 'running' ? 'All systems operational.' : 'There was an issue spinning up your pod.'}
                         </p>
 
                         {podStatus === 'running' && (
@@ -330,7 +328,7 @@ export default function DeployPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="btn btn-primary"
                                 onClick={() => navigate('/generate')}
-                                style={{ width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '1.1rem' }}
+                                style={{ width: '100%', padding: '16px', justifyContent: 'center', fontSize: '1.1rem' }}
                             >
                                 Go to Generator <Rocket size={20} />
                             </motion.button>
@@ -346,13 +344,13 @@ export default function DeployPage() {
                     {/* Quick Links Card */}
                     {podStatus === 'running' && (
                         <div className="card glass animate-fade-in" style={{ padding: '24px' }}>
-                            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Service Endpoints</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <a href={`https://${podId}-8188.proxy.runpod.net`} target="_blank" rel="noopener noreferrer" className="glass" style={{ padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'white', fontSize: '0.9rem' }}>
+                            <h4 style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px', fontWeight: 600 }}>External Endpoints</h4>
+                            <div className="flex-col gap-2">
+                                <a href={`https://${podId}-8188.proxy.runpod.net`} target="_blank" rel="noopener noreferrer" className="glass-panel" style={{ padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.9rem', transition: 'background 0.2s' }}>
                                     <span>ComfyUI Interface</span>
                                     <ExternalLink size={14} color="var(--accent)" />
                                 </a>
-                                <a href={`https://${podId}-8001.proxy.runpod.net`} target="_blank" rel="noopener noreferrer" className="glass" style={{ padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'white', fontSize: '0.9rem' }}>
+                                <a href={`https://${podId}-8001.proxy.runpod.net`} target="_blank" rel="noopener noreferrer" className="glass-panel" style={{ padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                                     <span>Log Server GUI</span>
                                     <ExternalLink size={14} color="var(--accent)" />
                                 </a>
@@ -361,13 +359,13 @@ export default function DeployPage() {
                     )}
 
                     {/* Info Card */}
-                    <div className="card glass" style={{ padding: '24px', background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+                    <div className="card glass-panel" style={{ padding: '20px', background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.1)' }}>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <Info size={20} color="var(--accent)" style={{ flexShrink: 0 }} />
+                            <Info size={20} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
                             <div>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '4px' }}>Pod Billing</h4>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '4px' }}>Billing Active</h4>
                                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                                    Your pod is billed while RUNNING. Remember to terminate it when you're finished to stop further charges.
+                                    Your pod is billed while RUNNING. Terminate it when finished to stop charges.
                                 </p>
                             </div>
                         </div>

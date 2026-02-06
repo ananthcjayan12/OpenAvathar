@@ -53,7 +53,7 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="container" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+        <div className="container flex-center" style={{ minHeight: '100vh', padding: '40px 20px' }}>
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -62,12 +62,12 @@ export default function LandingPage() {
             >
                 <div className="card glass" style={{ padding: '48px', position: 'relative', overflow: 'hidden' }}>
                     {/* Background Highlight */}
-                    <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '200px', height: '200px', background: 'var(--accent)', opacity: 0.05, filter: 'blur(60px)', borderRadius: '50%' }}></div>
+                    <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '200px', height: '200px', background: 'var(--accent)', opacity: 0.1, filter: 'blur(60px)', borderRadius: '50%' }}></div>
 
                     <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                         <motion.h1
                             className="text-gradient"
-                            style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '12px', letterSpacing: '-0.02em' }}
+                            style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '12px', letterSpacing: '-0.02em', lineHeight: 1.1 }}
                         >
                             OpenAvathar
                         </motion.h1>
@@ -76,33 +76,32 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <form onSubmit={handleSubmit} className="flex-col gap-4">
+                        <div className="flex-col gap-2">
                             <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginLeft: '4px' }}>
                                 RunPod API Key
                             </label>
                             <div style={{ position: 'relative' }}>
-                                <Key size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                <Key size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                                 <input
                                     type={showKey ? 'text' : 'password'}
                                     value={keyInput}
                                     onChange={(e) => setKeyInput(e.target.value)}
                                     placeholder="Paste your API key here..."
-                                    className="glass"
                                     style={{
                                         width: '100%',
-                                        padding: '14px 48px',
+                                        padding: '16px 48px',
                                         fontSize: '1rem',
-                                        color: 'white',
                                         border: error ? '1px solid var(--error)' : '1px solid var(--border)',
-                                        boxSizing: 'border-box'
                                     }}
+                                    className="glass-panel"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowKey(!showKey)}
-                                    style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+                                    className="btn-icon"
+                                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}
                                 >
                                     {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
@@ -127,10 +126,13 @@ export default function LandingPage() {
                             type="submit"
                             className="btn btn-primary"
                             disabled={isLoading || !keyInput.trim()}
-                            style={{ padding: '16px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                            style={{ padding: '16px', fontSize: '1.05rem', marginTop: '8px' }}
                         >
                             {isLoading ? (
-                                'Validating Key...'
+                                <>
+                                    <span className="animate-spin" style={{ marginRight: '8px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', width: '16px', height: '16px', display: 'inline-block' }}></span>
+                                    Validating Key...
+                                </>
                             ) : (
                                 <>
                                     Connect RunPod <ArrowRight size={20} />
@@ -138,7 +140,7 @@ export default function LandingPage() {
                             )}
                         </button>
 
-                        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                        <div className="flex-center" style={{ marginTop: '12px', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem', opacity: 0.8 }}>
                             <ShieldCheck size={14} />
                             <span>Your key is stored in memory and never leaves your browser.</span>
                         </div>
@@ -153,11 +155,11 @@ export default function LandingPage() {
                                 localStorage.clear();
                                 window.location.reload();
                             }}
+                            className="text-secondary"
                             style={{
                                 marginTop: '16px',
                                 background: 'none',
                                 border: 'none',
-                                color: 'var(--text-secondary)',
                                 fontSize: '0.8rem',
                                 cursor: 'pointer',
                                 textDecoration: 'underline',

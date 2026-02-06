@@ -49,15 +49,21 @@ export default function GeneratePage() {
     // Fetch videos from ComfyUI on mount
     useEffect(() => {
         const fetchVideos = async () => {
-            if (!comfyuiUrl) return;
+            if (!comfyuiUrl) {
+                console.log('[VideoHistory] No ComfyUI URL available, skipping fetch');
+                return;
+            }
 
+            console.log('[VideoHistory] Fetching videos from ComfyUI:', comfyuiUrl);
             setIsLoadingVideos(true);
             try {
                 const comfyVideos = await comfyuiApi.getOutputVideos(comfyuiUrl);
+                console.log('[VideoHistory] Fetched videos from ComfyUI:', comfyVideos.length);
 
                 // Merge with stored videos, avoiding duplicates
                 const storedVideoIds = new Set(generatedVideos.map(v => v.id));
                 const newVideos = comfyVideos.filter(v => !storedVideoIds.has(v.id));
+                console.log('[VideoHistory] Stored videos:', generatedVideos.length, 'New videos:', newVideos.length);
 
                 // Combine stored videos (with metadata) and new videos from ComfyUI
                 const combined = [
@@ -74,9 +80,10 @@ export default function GeneratePage() {
 
                 // Sort by timestamp
                 combined.sort((a, b) => b.timestamp - a.timestamp);
+                console.log('[VideoHistory] Total videos to display:', combined.length);
                 setAllVideos(combined);
             } catch (err) {
-                console.error('Failed to fetch videos:', err);
+                console.error('[VideoHistory] Failed to fetch videos:', err);
             } finally {
                 setIsLoadingVideos(false);
             }
@@ -84,18 +91,6 @@ export default function GeneratePage() {
 
         fetchVideos();
     }, [comfyuiUrl, generatedVideos]);
-
-    // Debug logging for button state
-    useEffect(() => {
-        console.log('Generate Button State:', {
-            comfyuiUrl: !!comfyuiUrl,
-            purpose,
-            selectedImage: !!selectedImage,
-            selectedAudio: !!selectedAudio,
-            generationStatus,
-            isReady: comfyuiUrl && selectedImage && (purpose === 'wan2.2' || (purpose === 'infinitetalk' && selectedAudio))
-        });
-    }, [comfyuiUrl, purpose, selectedImage, selectedAudio, generationStatus]);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -201,7 +196,6 @@ export default function GeneratePage() {
         }, 5000);
     };
 
-    // Check if all required inputs are ready
     const isReady = Boolean(
         comfyuiUrl &&
         selectedImage &&
@@ -217,22 +211,29 @@ export default function GeneratePage() {
 
     return (
         <div className="container" style={{ padding: '60px 20px', maxWidth: '1400px' }}>
-            <header style={{ marginBottom: '40px', textAlign: 'center' }}>
-                <h1 className="text-gradient" style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+            <header className="flex-center flex-col gap-2" style={{ marginBottom: '40px', textAlign: 'center' }}>
+                <h1 className="text-gradient" style={{ fontSize: '2.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                     <Wand2 /> AI Video Generator
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
+                <p className="text-secondary" style={{ fontSize: '1.1rem' }}>
                     {purpose === 'wan2.2' ? 'Transform images into dynamic videos' : 'Create talking head videos with audio'}
                 </p>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: generationStatus === 'idle' ? '1fr 1fr' : '1fr', gap: '30px', maxWidth: generationStatus === 'idle' ? '100%' : '800px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: generationStatus === 'idle' ? '1fr 1fr' : '1fr', gap: '30px', maxWidth: generationStatus === 'idle' ? '100%' : '800px', margin: '0 auto' }} className="responsive-gen-layout">
+                <style>{`
+                    @media (max-width: 900px) {
+                        .responsive-gen-layout { grid-template-columns: 1fr !important; }
+                    }
+                `}</style>
+
                 {/* Input Section */}
                 {generationStatus === 'idle' && (
                     <>
+                        {/* Left: Uploads */}
                         <div className="card glass" style={{ padding: '30px' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ImageIcon size={20} /> Upload Image
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                                <ImageIcon size={20} color="var(--accent)" /> Source Image
                             </h3>
 
                             <input
@@ -244,20 +245,20 @@ export default function GeneratePage() {
                             />
 
                             {imagePreview ? (
-                                <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
-                                    <img src={imagePreview} alt="Preview" style={{ width: '100%', display: 'block' }} />
+                                <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                                    <img src={imagePreview} alt="Preview" style={{ width: '100%', display: 'block', maxHeight: '400px', objectFit: 'contain', background: '#000' }} />
                                     <button
                                         onClick={() => imageInputRef.current?.click()}
                                         className="btn btn-secondary"
-                                        style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px' }}
+                                        style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
                                     >
                                         Change Image
                                     </button>
                                 </div>
                             ) : (
-                                <button
+                                <div
                                     onClick={() => imageInputRef.current?.click()}
-                                    className="glass"
+                                    className="glass-panel"
                                     style={{
                                         width: '100%',
                                         padding: '60px 20px',
@@ -267,20 +268,22 @@ export default function GeneratePage() {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        gap: '12px',
+                                        gap: '16px',
                                         color: 'var(--text-secondary)',
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <Upload size={36} />
-                                    <span>Click to upload image</span>
-                                </button>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '50%' }}>
+                                        <Upload size={32} />
+                                    </div>
+                                    <span style={{ fontSize: '0.9rem' }}>Click or drag to upload image</span>
+                                </div>
                             )}
 
                             {purpose === 'infinitetalk' && (
                                 <>
-                                    <h3 style={{ fontSize: '1.1rem', marginTop: '24px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Mic size={20} /> Upload Audio
+                                    <h3 style={{ fontSize: '1.1rem', marginTop: '32px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                                        <Mic size={20} color="var(--accent)" /> Voice Audio
                                     </h3>
 
                                     <input
@@ -292,19 +295,21 @@ export default function GeneratePage() {
                                     />
 
                                     {selectedAudio ? (
-                                        <div className="glass" style={{ padding: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <Mic size={18} color="var(--accent)" />
-                                                <span>{selectedAudio.name}</span>
+                                        <div className="glass-panel" style={{ padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ background: 'var(--accent)', padding: '10px', borderRadius: '50%', color: 'white' }}>
+                                                    <Mic size={18} />
+                                                </div>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{selectedAudio.name}</span>
                                             </div>
-                                            <button onClick={() => audioInputRef.current?.click()} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
+                                            <button onClick={() => audioInputRef.current?.click()} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
                                                 Change
                                             </button>
                                         </div>
                                     ) : (
-                                        <button
+                                        <div
                                             onClick={() => audioInputRef.current?.click()}
-                                            className="glass"
+                                            className="glass-panel"
                                             style={{
                                                 width: '100%',
                                                 padding: '40px 20px',
@@ -318,57 +323,56 @@ export default function GeneratePage() {
                                                 color: 'var(--text-secondary)'
                                             }}
                                         >
-                                            <Mic size={28} />
-                                            <span>Click to upload audio</span>
-                                        </button>
+                                            <Mic size={24} style={{ opacity: 0.7 }} />
+                                            <span style={{ fontSize: '0.9rem' }}>Click to upload audio track</span>
+                                        </div>
                                     )}
                                 </>
                             )}
                         </div>
 
+                        {/* Right: Settings */}
                         <div className="card glass" style={{ padding: '30px', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '20px' }}>Generation Settings</h3>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '24px', fontWeight: 600 }}>Generation Settings</h3>
 
                             {/* Video Orientation */}
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                Video Orientation
+                            <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'block' }}>
+                                Aspect Ratio
                             </label>
-                            <div className="glass" style={{ display: 'flex', padding: '6px', gap: '6px', background: 'var(--bg-secondary)', marginBottom: '20px' }}>
+                            <div className="glass-panel" style={{ display: 'flex', padding: '4px', gap: '4px', borderRadius: '10px', marginBottom: '24px' }}>
                                 <button
                                     onClick={() => useAppStore.getState().setVideoOrientation('horizontal')}
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: videoOrientation === 'horizontal' ? 'var(--accent)' : 'transparent',
+                                        background: videoOrientation === 'horizontal' ? 'rgba(255,255,255,0.1)' : 'transparent',
                                         color: videoOrientation === 'horizontal' ? 'white' : 'var(--text-secondary)',
-                                        padding: '10px',
-                                        fontSize: '0.9rem',
-                                        border: 'none'
+                                        border: 'none',
+                                        fontSize: '0.9rem'
                                     }}
                                 >
-                                    🖥️ Horizontal
+                                    🖥️ Landscape
                                 </button>
                                 <button
                                     onClick={() => useAppStore.getState().setVideoOrientation('vertical')}
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: videoOrientation === 'vertical' ? 'var(--accent)' : 'transparent',
+                                        background: videoOrientation === 'vertical' ? 'rgba(255,255,255,0.1)' : 'transparent',
                                         color: videoOrientation === 'vertical' ? 'white' : 'var(--text-secondary)',
-                                        padding: '10px',
-                                        fontSize: '0.9rem',
-                                        border: 'none'
+                                        border: 'none',
+                                        fontSize: '0.9rem'
                                     }}
                                 >
-                                    📱 Vertical
+                                    📱 Portrait
                                 </button>
                             </div>
 
                             {/* Max Frames */}
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>Max Frames</span>
-                                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{maxFrames}</span>
-                            </label>
+                            <div className="flex-between" style={{ marginBottom: '10px' }}>
+                                <label className="text-secondary" style={{ fontSize: '0.85rem' }}>Duration (Frames)</label>
+                                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem' }}>{maxFrames}</span>
+                            </div>
                             <input
                                 type="range"
                                 min="30"
@@ -378,16 +382,17 @@ export default function GeneratePage() {
                                 onChange={(e) => useAppStore.getState().setMaxFrames(Number(e.target.value))}
                                 style={{
                                     width: '100%',
-                                    marginBottom: '20px',
-                                    accentColor: 'var(--accent)'
+                                    marginBottom: '24px',
+                                    accentColor: 'var(--accent)',
+                                    height: '6px'
                                 }}
                             />
 
                             {/* Audio CFG Scale */}
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span>Audio CFG Scale</span>
-                                <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{audioCfgScale.toFixed(1)}</span>
-                            </label>
+                            <div className="flex-between" style={{ marginBottom: '10px' }}>
+                                <label className="text-secondary" style={{ fontSize: '0.85rem' }}>Audio Guidance Scale</label>
+                                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem' }}>{audioCfgScale.toFixed(1)}</span>
+                            </div>
                             <input
                                 type="range"
                                 min="1.0"
@@ -397,71 +402,64 @@ export default function GeneratePage() {
                                 onChange={(e) => useAppStore.getState().setAudioCfgScale(Number(e.target.value))}
                                 style={{
                                     width: '100%',
-                                    marginBottom: '20px',
-                                    accentColor: 'var(--accent)'
+                                    marginBottom: '24px',
+                                    accentColor: 'var(--accent)',
+                                    height: '6px'
                                 }}
                             />
 
                             {/* Prompt */}
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                Prompt (Optional)
+                            <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'block' }}>
+                                Description Prompt (Optional)
                             </label>
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Describe the motion, style, or mood..."
-                                className="glass"
+                                placeholder="Describe the motion, style, or specific details you want in the video..."
                                 style={{
                                     width: '100%',
-                                    minHeight: '120px',
-                                    padding: '12px',
-                                    fontSize: '1rem',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '8px',
-                                    color: 'white',
-                                    resize: 'vertical',
-                                    marginBottom: '24px'
+                                    minHeight: '140px',
+                                    padding: '16px',
+                                    fontSize: '0.95rem',
+                                    marginBottom: '24px',
+                                    resize: 'vertical'
                                 }}
                             />
 
                             <div style={{ marginTop: 'auto' }}>
                                 {!isReady && (
-                                    <p style={{
+                                    <div style={{
                                         fontSize: '0.85rem',
-                                        color: 'var(--text-secondary)',
+                                        color: 'var(--warning)',
                                         textAlign: 'center',
-                                        marginBottom: '12px',
-                                        padding: '8px',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        borderRadius: '6px',
+                                        marginBottom: '16px',
+                                        padding: '10px',
+                                        background: 'rgba(245, 158, 11, 0.1)',
+                                        borderRadius: '8px',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '8px',
+                                        border: '1px solid rgba(245, 158, 11, 0.2)'
                                     }}>
-                                        <AlertTriangle size={14} /> {getReadyStatus()}
-                                    </p>
+                                        <AlertTriangle size={16} /> {getReadyStatus()}
+                                    </div>
                                 )}
                                 <button
                                     onClick={handleGenerate}
                                     disabled={!isReady}
-                                    className={`btn ${isReady ? 'btn-primary' : ''}`}
+                                    className="btn btn-primary"
                                     style={{
                                         width: '100%',
                                         padding: '16px',
-                                        fontSize: '1.05rem',
+                                        fontSize: '1.1rem',
                                         display: 'flex',
-                                        alignItems: 'center',
                                         justifyContent: 'center',
                                         gap: '10px',
-                                        opacity: isReady ? 1 : 0.5,
-                                        cursor: isReady ? 'pointer' : 'not-allowed',
-                                        background: isReady ? 'var(--accent)' : 'var(--bg-secondary)',
-                                        color: isReady ? 'white' : 'var(--text-secondary)',
-                                        border: isReady ? 'none' : '1px solid var(--border)'
+                                        boxShadow: isReady ? '0 0 20px rgba(99, 102, 241, 0.4)' : 'none'
                                     }}
                                 >
-                                    <Play size={20} /> Generate Video
+                                    <Play size={20} fill="currentColor" /> Generate Video
                                 </button>
                             </div>
                         </div>
@@ -474,57 +472,60 @@ export default function GeneratePage() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="card glass"
-                        style={{ padding: '50px', textAlign: 'center' }}
+                        style={{ padding: '60px', textAlign: 'center', gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}
                     >
                         <AnimatePresence mode="wait">
                             {generationStatus === 'uploading' && (
                                 <motion.div key="uploading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                                     <Loader2 size={64} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto 24px' }} />
-                                    <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Uploading Files...</h3>
-                                    <p style={{ color: 'var(--text-secondary)' }}>Transferring your media to the GPU pod</p>
+                                    <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Uploading Media...</h3>
+                                    <p className="text-secondary">Transferring source files to the GPU pod</p>
                                 </motion.div>
                             )}
 
                             {generationStatus === 'queuing' && (
                                 <motion.div key="queuing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                    <Loader2 size={64} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto 24px' }} />
+                                    <div style={{ display: 'inline-block', padding: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', marginBottom: '24px' }}>
+                                        <Loader2 size={48} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                                    </div>
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Preparing Workflow...</h3>
-                                    <p style={{ color: 'var(--text-secondary)' }}>Configuring AI models</p>
+                                    <p className="text-secondary">Configuring AI compute nodes</p>
                                 </motion.div>
                             )}
 
                             {generationStatus === 'generating' && (
                                 <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                    <Loader2 size={64} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto 24px' }} />
+                                    <div style={{ position: 'relative', width: '80px', height: '80px', margin: '0 auto 24px' }}>
+                                        <div style={{ position: 'absolute', inset: 0, border: '4px solid var(--border)', borderRadius: '50%' }}></div>
+                                        <div style={{ position: 'absolute', inset: 0, border: '4px solid var(--accent)', borderRadius: '50%', borderTopColor: 'transparent', animation: 'spin 2s linear infinite' }}></div>
+                                        <Film size={32} style={{ position: 'absolute', top: '24px', left: '24px', color: 'var(--text-primary)' }} />
+                                    </div>
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Generating Video...</h3>
-                                    <p style={{ color: 'var(--text-secondary)' }}>This typically takes 2-5 minutes</p>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '12px' }}>
-                                        Prompt ID: {currentPromptId}
-                                    </p>
+                                    <p className="text-secondary">This usually takes 2-5 minutes.</p>
+                                    <div className="glass-panel" style={{ display: 'inline-block', marginTop: '20px', padding: '8px 16px', borderRadius: '20px', fontSize: '0.85rem' }}>
+                                        ID: <span style={{ fontFamily: 'var(--font-mono)' }}>{currentPromptId}</span>
+                                    </div>
                                 </motion.div>
                             )}
 
                             {generationStatus === 'completed' && (
                                 <motion.div key="completed" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
-                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 0 40px rgba(16, 185, 129, 0.4)' }}>
                                         <CheckCircle2 size={48} color="white" />
                                     </div>
-                                    <h3 style={{ fontSize: '1.5rem', marginBottom: '24px' }}>Video Generated!</h3>
+                                    <h3 style={{ fontSize: '1.75rem', marginBottom: '32px' }}>Video Ready!</h3>
 
                                     {outputVideo && comfyuiUrl && (
-                                        <VideoPreview
-                                            comfyuiUrl={comfyuiUrl}
-                                            filename={outputVideo}
-                                            onClose={() => {
-                                                setGenerationStatus('idle');
-                                                setOutputVideo(null);
-                                                setCurrentPromptId(null);
-                                                setSelectedImage(null);
-                                                setSelectedAudio(null);
-                                                setImagePreview(null);
-                                                setPrompt('');
-                                            }}
-                                        />
+                                        <div style={{ marginBottom: '32px' }}>
+                                            <VideoPreview
+                                                comfyuiUrl={comfyuiUrl}
+                                                filename={outputVideo}
+                                                onClose={() => {
+                                                    setGenerationStatus('idle');
+                                                    setOutputVideo(null);
+                                                }}
+                                            />
+                                        </div>
                                     )}
 
                                     <button
@@ -538,21 +539,20 @@ export default function GeneratePage() {
                                             setPrompt('');
                                         }}
                                         className="btn btn-secondary"
-                                        style={{ marginTop: '16px' }}
                                     >
-                                        Generate Another
+                                        Create Another Video
                                     </button>
                                 </motion.div>
                             )}
 
                             {generationStatus === 'failed' && (
                                 <motion.div key="failed" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                                        <AlertTriangle size={48} color="white" />
+                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.2)', border: '1px solid var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                                        <AlertTriangle size={48} color="var(--error)" />
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Generation Failed</h3>
                                     {error && (
-                                        <p style={{ color: 'var(--error)', marginBottom: '24px' }}>{error}</p>
+                                        <p style={{ color: 'var(--error)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>{error}</p>
                                     )}
                                     <button
                                         onClick={() => {
@@ -571,107 +571,99 @@ export default function GeneratePage() {
             </div>
 
             {/* Gallery Section */}
-            {(allVideos.length > 0 || isLoadingVideos) && (
-                <div style={{ marginTop: '60px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                        <h2 style={{ fontSize: '2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <Film size={32} />
-                            Video Gallery
-                            {isLoadingVideos && (
-                                <Loader2 size={24} className="animate-spin" style={{ color: 'var(--accent)' }} />
-                            )}
-                        </h2>
-                        {allVideos.length > 0 && (
-                            <button
-                                onClick={() => {
-                                    if (confirm('Are you sure you want to clear all video history?')) {
-                                        clearVideoHistory();
-                                        setAllVideos([]);
-                                    }
-                                }}
-                                className="btn btn-secondary"
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                            >
-                                <Trash2 size={18} />
-                                Clear History
-                            </button>
+            <div style={{ marginTop: '80px' }}>
+                <div className="flex-between" style={{ marginBottom: '30px' }}>
+                    <h2 style={{ fontSize: '2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <Film size={28} color="var(--accent)" />
+                        Video History
+                        {isLoadingVideos && (
+                            <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
                         )}
-                    </div>
-
-                    {isLoadingVideos && allVideos.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-                            <Loader2 size={48} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto 16px' }} />
-                            <p>Loading videos from ComfyUI...</p>
-                        </div>
-                    ) : allVideos.length === 0 ? (
-                        <div className="card glass" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-                            <Film size={48} style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-                            <p>No videos generated yet. Generate your first video above!</p>
-                        </div>
-                    ) : (
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                            gap: '24px'
-                        }}>
-                            {allVideos.map((video) => (
-                                <motion.div
-                                    key={video.id}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="card glass"
-                                    style={{
-                                        padding: '16px',
-                                        cursor: 'pointer',
-                                        transition: 'transform 0.2s',
-                                    }}
-                                    whileHover={{ scale: 1.02 }}
-                                >
-                                    <div style={{
-                                        position: 'relative',
-                                        width: '100%',
-                                        backgroundColor: 'var(--bg-secondary)',
-                                        borderRadius: '8px',
-                                        overflow: 'hidden',
-                                        marginBottom: '12px'
-                                    }}>
-                                        <video
-                                            src={video.url}
-                                            style={{
-                                                width: '100%',
-                                                height: 'auto',
-                                                display: 'block',
-                                                maxHeight: '600px',
-                                                objectFit: 'contain'
-                                            }}
-                                            controls
-                                            preload="metadata"
-                                        />
-                                    </div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                            <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
-                                                {video.purpose === 'wan2.2' ? 'WAN 2.2' : video.purpose === 'infinitetalk' ? 'InfiniteTalk' : 'Generated Video'}
-                                            </span>
-                                            {video.orientation && (
-                                                <span>
-                                                    {video.orientation === 'horizontal' ? '🖥️ Horizontal' : '📱 Vertical'}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                                            {new Date(video.timestamp).toLocaleString()}
-                                        </div>
-                                        <div style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '4px', wordBreak: 'break-all' }}>
-                                            {video.filename}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                    </h2>
+                    {allVideos.length > 0 && (
+                        <button
+                            onClick={() => {
+                                if (confirm('Are you sure you want to clear all video history?')) {
+                                    clearVideoHistory();
+                                    setAllVideos([]);
+                                }
+                            }}
+                            className="btn btn-secondary"
+                            style={{ fontSize: '0.85rem' }}
+                        >
+                            <Trash2 size={16} /> Clear History
+                        </button>
                     )}
                 </div>
-            )}
+
+                {isLoadingVideos && allVideos.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+                        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto 16px' }} />
+                        <p>Syncing gallery with ComfyUI...</p>
+                    </div>
+                ) : allVideos.length === 0 ? (
+                    <div className="card glass" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+                        <Film size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                        <p>No videos generated yet.</p>
+                    </div>
+                ) : (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                        gap: '24px'
+                    }}>
+                        {allVideos.map((video) => (
+                            <motion.div
+                                key={video.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="card glass"
+                                style={{
+                                    padding: '12px',
+                                    transition: 'transform 0.2s',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-secondary)'
+                                }}
+                                whileHover={{ y: -5 }}
+                            >
+                                <div style={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    backgroundColor: '#000',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    marginBottom: '16px',
+                                    aspectRatio: video.orientation === 'vertical' ? '9/16' : '16/9'
+                                }}>
+                                    <video
+                                        src={video.url}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'contain'
+                                        }}
+                                        controls
+                                        preload="metadata"
+                                    />
+                                </div>
+                                <div style={{ padding: '0 4px' }}>
+                                    <div className="flex-between" style={{ marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            {video.purpose === 'wan2.2' ? 'WAN 2.2' : video.purpose === 'infinitetalk' ? 'InfiniteTalk' : 'Video'}
+                                        </span>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                            {new Date(video.timestamp).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {video.filename}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
