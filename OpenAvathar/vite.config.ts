@@ -10,4 +10,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/graphql': {
+        target: 'https://api.runpod.io',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 })
