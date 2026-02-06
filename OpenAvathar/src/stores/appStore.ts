@@ -36,7 +36,7 @@ interface AppState {
     setPodStatus: (status: AppState['podStatus']) => void;
     setUrls: (comfyui: string | null, logServer: string | null) => void;
     setGenerationStatus: (status: AppState['generationStatus']) => void;
-    setPromptId: (id: string | null) => void;
+    setCurrentPromptId: (id: string | null) => void;
     setOutputVideo: (url: string | null) => void;
     addLog: (line: string) => void;
     clearLogs: () => void;
@@ -71,7 +71,7 @@ export const useAppStore = create<AppState>()(
             setPodStatus: (podStatus) => set({ podStatus }),
             setUrls: (comfyuiUrl, logServerUrl) => set({ comfyuiUrl, logServerUrl }),
             setGenerationStatus: (generationStatus) => set({ generationStatus }),
-            setPromptId: (currentPromptId) => set({ currentPromptId }),
+            setCurrentPromptId: (currentPromptId: string | null) => set({ currentPromptId }),
             setOutputVideo: (outputVideo) => set({ outputVideo }),
             addLog: (line) =>
                 set((state) => ({

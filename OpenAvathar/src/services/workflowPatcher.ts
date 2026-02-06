@@ -67,6 +67,17 @@ class WorkflowPatcher {
     }
 
     /**
+     * Dynamically patches the correct workflow based on purpose
+     */
+    async patchWorkflow(purpose: 'wan2.2' | 'infinitetalk', config: Wan22Config | InfiniteTalkConfig): Promise<object> {
+        if (purpose === 'wan2.2') {
+            return this.patchWan22(config as Wan22Config);
+        } else {
+            return this.patchInfiniteTalk(config as InfiniteTalkConfig);
+        }
+    }
+
+    /**
      * Returns the base workflow JSONs for manual editing or reference
      */
     getBaseWorkflows() {

@@ -1,16 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Rocket,
+    Loader2,
+    CheckCircle2,
+    AlertTriangle,
     Terminal,
     ExternalLink,
     StopCircle,
-    CheckCircle2,
-    AlertTriangle,
-    Loader2,
-    Server,
-    Activity
+    Info,
+    Rocket,
+    ChevronRight,
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { runpodApi } from '@/services/runpodApi';
@@ -25,49 +25,67 @@ export default function DeployPage() {
         gpuType,
         podId,
         setPodId,
-        setPodStatus,
         podStatus,
+        setPodStatus,
         setUrls,
-        addLog,
         logs,
-        clearLogs,
-        reset
+        addLog
     } = useAppStore();
 
-    const [error, setError] = useState<string | null>(null);
-    const [deploymentStep, setDeploymentStep] = useState<string>('Initializing');
     const logEndRef = useRef<HTMLDivElement>(null);
     const deploymentStarted = useRef(false);
+    const [error, setError] = useState<string | null>(null);
+    const [deploymentStep, setDeploymentStep] = useState('Initializing...');
 
     // Auto-scroll logs
     useEffect(() => {
         logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
+    // Effect 1: Navigation guards (runs on mount and when apiKey/purpose change)
     useEffect(() => {
-        // If no API key, redirect to login
         if (!apiKey) {
             navigate('/');
             return;
         }
-
-        // If no podId and no purpose, redirect to setup
         if (!podId && !purpose) {
             navigate('/setup');
             return;
         }
+    }, [apiKey, purpose, podId, navigate]);
 
-        let isMounted = true;
-        let pollInterval: number | null = null;
+    // Effect 2: Deployment (runs once on mount if no podId exists)
+    useEffect(() => {
+        if (deploymentStarted.current || podId || !purpose || podStatus !== 'idle') {
+            return;
+        }
 
         const startDeployment = async () => {
             deploymentStarted.current = true;
+
+            console.log('[DeployPage] Starting new deployment...');
             try {
+                // Validate purpose
+                if (!purpose) {
+                    setError('No purpose selected');
+                    setPodStatus('failed');
+                    return;
+                }
+
+                // Clear old logs
+                const { clearLogs } = useAppStore.getState();
+                clearLogs();
+
                 setPodStatus('deploying');
                 setDeploymentStep('Requesting GPU Pod from RunPod...');
 
-                const templateId = purpose === 'wan2.2' ? '6au21jp9c9' : 'qvidd7ityi';
-                const pod = await runpodApi.deployPod(apiKey, {
+                const TEMPLATES = {
+                    'wan2.2': '6au21jp9c9',
+                    'infinitetalk': 'qvidd7ityi',
+                } as const;
+
+                const templateId = TEMPLATES[purpose];
+                const pod = await runpodApi.deployPod(apiKey!, {
                     name: `OpenAvathar-${purpose}-${Date.now().toString().slice(-4)}`,
                     templateId,
                     gpuTypeId: gpuType || 'NVIDIA GeForce RTX 4090',
@@ -75,90 +93,94 @@ export default function DeployPage() {
                     cloudType,
                 });
 
-                if (!isMounted) return;
-                setPodId(pod.id);
+                console.log('[DeployPage] Pod created successfully:', pod.id);
                 addLog(`[SYSTEM] New Pod created: ${pod.id}`);
-                monitorPod(pod.id);
+                setPodId(pod.id);
             } catch (err: any) {
-                if (isMounted) {
-                    setError(err.message || 'Failed to deploy pod');
-                    setPodStatus('failed');
-                }
+                console.error('[DeployPage] Deployment error:', err);
+                setError(err.message || 'Failed to deploy pod');
+                setPodStatus('failed');
             }
         };
 
-        const monitorPod = (id: string) => {
-            setDeploymentStep('Waiting for container to start...');
+        startDeployment();
+    }, []); // Empty deps - only run once on mount
 
-            pollInterval = window.setInterval(async () => {
-                try {
-                    const status = await runpodApi.getPodStatus(apiKey, id);
-                    if (!isMounted) return;
-
-                    if (status.desiredStatus === 'RUNNING' && status.runtime) {
-                        const comfyUrl = `https://${id}-8188.proxy.runpod.net`;
-                        const logUrl = `https://${id}-8001.proxy.runpod.net`;
-                        setUrls(comfyUrl, logUrl);
-
-                        // Note: Skipping log server readiness check due to CORS
-                        // The server will be available shortly after pod starts
-                        setPodStatus('running');
-                        setDeploymentStep('Pod is Ready!');
-                        if (pollInterval) clearInterval(pollInterval);
-
-                        // Connect to log stream (will auto-reconnect if not ready)
-                        logStream.connect(id, (line) => addLog(line));
-                    }
-                } catch (err: any) {
-                    console.error('Polling error:', err);
-                }
-            }, 5000);
-        };
-
-        console.log('[DeployPage] Debug:', { podId, podStatus, purpose, apiKey: !!apiKey, deploymentStarted: deploymentStarted.current });
-
-        if (podId) {
-            // Already have a pod (from resume or persistence), just monitor it
-            console.log('[DeployPage] Resuming pod:', podId);
-            setPodStatus('deploying');
-            addLog(`[SYSTEM] Resuming pod: ${podId}`);
-            monitorPod(podId);
-        } else if (!deploymentStarted.current && podStatus === 'idle') {
-            console.log('[DeployPage] Starting new deployment');
-            startDeployment();
+    // Effect 3: Monitoring (reacts to podId changes)
+    useEffect(() => {
+        if (!podId || !apiKey || podStatus === 'running') {
+            return;
         }
 
+        console.log('[DeployPage] Initializing monitor for:', podId);
+        setDeploymentStep('Waiting for container to start...');
+
+        const MAX_POLL_ATTEMPTS = 60; // 5 minutes
+        let attempts = 0;
+
+        const pollInterval = window.setInterval(async () => {
+            attempts++;
+            if (attempts > MAX_POLL_ATTEMPTS) {
+                clearInterval(pollInterval);
+                setError('Deployment timed out after 5 minutes');
+                setPodStatus('failed');
+                return;
+            }
+
+            try {
+                console.log('[DeployPage] Polling status for:', podId, `(attempt ${attempts}/${MAX_POLL_ATTEMPTS})`);
+                const status = await runpodApi.getPodStatus(apiKey, podId);
+
+                if (status.desiredStatus === 'RUNNING' && status.runtime) {
+                    console.log('[DeployPage] Pod is RUNNING, checking services...');
+                    const comfyUrl = `https://${podId}-8188.proxy.runpod.net`;
+                    const logUrl = `https://${podId}-8001.proxy.runpod.net`;
+                    setUrls(comfyUrl, logUrl);
+
+                    setPodStatus('running');
+                    setDeploymentStep('Pod is Ready!');
+                    clearInterval(pollInterval);
+
+                    logStream.connect(podId, (line) => addLog(line));
+                }
+            } catch (err: any) {
+                console.error('[DeployPage] Polling error:', err);
+                if (err.response?.status === 404 || err.message?.includes('not found')) {
+                    clearInterval(pollInterval);
+                    setPodId(null);
+                    setPodStatus('idle');
+                    setError('Pod no longer exists.');
+                }
+            }
+        }, 5000);
+
         return () => {
-            isMounted = false;
-            if (pollInterval) clearInterval(pollInterval);
+            clearInterval(pollInterval);
         };
-    }, []);
+    }, [podId, apiKey]); // React to podId changes
 
     const handleStop = async () => {
         if (!podId || !apiKey) return;
 
         const confirmStop = window.confirm('Are you sure you want to stop and terminate this pod? You will lose any unsaved progress and billing will stop.');
+        if (!confirmStop) return;
 
-        if (confirmStop) {
-            try {
-                setPodStatus('stopping');
-                await runpodApi.terminatePod(apiKey, podId);
-                logStream.disconnect();
-                reset();
-                navigate('/setup');
-            } catch (err: any) {
-                alert('Failed to stop pod: ' + err.message);
-            }
+        try {
+            await runpodApi.terminatePod(apiKey, podId);
+            setPodId(null);
+            setPodStatus('idle');
+            navigate('/setup');
+        } catch (err: any) {
+            alert('Failed to terminate pod: ' + err.message);
         }
     };
 
     return (
-        <div className="container" style={{ padding: '60px 20px', maxWidth: '1200px' }}>
-            <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="container" style={{ padding: '40px 20px', maxWidth: '1400px' }}>
+            <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Server className={podStatus === 'running' ? 'text-gradient' : ''} />
-                        GPU Pod Management
+                    <h1 className="text-gradient" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Terminal /> GPU Pod Management
                     </h1>
                     <p style={{ color: 'var(--text-secondary)' }}>
                         {podId ? `Pod ID: ${podId}` : 'Initializing deployment...'}
@@ -175,33 +197,26 @@ export default function DeployPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' }}>
                 {/* Left Column: Log Viewer */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div className="card glass" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: '500px', padding: 0, overflow: 'hidden' }}>
-                        <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: 600 }}>
-                                <Terminal size={16} /> Live Logs
-                            </div>
-                            {logStream.isConnected() && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--success)' }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></span>
-                                    Connected
-                                </div>
-                            )}
+                    <div className="card glass" style={{ flexGrow: 1, minHeight: '500px', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+                        <div style={{ padding: '12px 20px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <ChevronRight size={16} color="var(--accent)" />
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live Logs</span>
                         </div>
                         <div style={{
-                            padding: '20px',
                             flexGrow: 1,
-                            overflowY: 'auto',
-                            fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                            background: '#0a0a0c',
+                            padding: '20px',
+                            fontFamily: '"Fira Code", monospace',
                             fontSize: '0.85rem',
                             lineHeight: '1.6',
-                            color: '#d1d5db',
-                            background: '#0a0f1a'
+                            overflowY: 'auto',
+                            color: '#d1d1d1'
                         }}>
                             {logs.length === 0 ? (
                                 <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Waiting for logs...</div>
                             ) : (
                                 logs.map((log, i) => (
-                                    <div key={i} style={{ marginBottom: '4px', wordBreak: 'break-all' }}>
+                                    <div key={i} style={{ marginBottom: '4px', whiteSpace: 'pre-wrap' }}>
                                         <span style={{ color: 'var(--accent)', marginRight: '8px' }}>&gt;</span>
                                         {log}
                                     </div>
@@ -212,21 +227,20 @@ export default function DeployPage() {
                     </div>
                 </div>
 
-                {/* Right Column: Status & Actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                    {/* Main Status Card */}
+                {/* Right Column: Status Card */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div className="card glass" style={{ padding: '30px', textAlign: 'center' }}>
-                        <div style={{ position: 'relative', width: '80px', height: '80px', margin: '0 auto 24px' }}>
+                        <div style={{ width: '80px', height: '80px', margin: '0 auto 24px', position: 'relative' }}>
                             <AnimatePresence mode="wait">
-                                {podStatus === 'deploying' ? (
+                                {podStatus === 'idle' || podStatus === 'deploying' ? (
                                     <motion.div
-                                        key="deploying"
+                                        key="loading"
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        exit={{ scale: 0.8, opacity: 0 }}
-                                        style={{ width: '100%', height: '100%', borderRadius: '50%', border: '2px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        exit={{ scale: 1.2, opacity: 0 }}
+                                        style={{ width: '100%', height: '100%' }}
                                     >
-                                        <Loader2 size={40} className="animate-spin" color="var(--accent)" />
+                                        <Loader2 size={80} className="animate-spin" style={{ color: 'var(--accent)' }} />
                                     </motion.div>
                                 ) : podStatus === 'running' ? (
                                     <motion.div
@@ -251,6 +265,9 @@ export default function DeployPage() {
                         </div>
 
                         <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>{deploymentStep}</h3>
+                        {error && (
+                            <p style={{ color: 'var(--error)', fontSize: '0.85rem', marginBottom: '16px' }}>{error}</p>
+                        )}
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
                             {podStatus === 'deploying' ? 'This typically takes 2-3 minutes.' : podStatus === 'running' ? 'All systems operational.' : 'There was an issue spinning up your pod.'}
                         </p>
@@ -279,45 +296,33 @@ export default function DeployPage() {
                         <div className="card glass animate-fade-in" style={{ padding: '24px' }}>
                             <h4 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Service Endpoints</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <a
-                                    href={`https://${podId}-8188.proxy.runpod.net`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="glass"
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', textDecoration: 'none', color: 'white', borderRadius: '8px' }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <Activity size={16} color="var(--accent)" />
-                                        <span>ComfyUI Interface</span>
-                                    </div>
-                                    <ExternalLink size={14} color="var(--text-secondary)" />
+                                <a href={`https://${podId}-8188.proxy.runpod.net`} target="_blank" rel="noopener noreferrer" className="glass" style={{ padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'white', fontSize: '0.9rem' }}>
+                                    <span>ComfyUI Interface</span>
+                                    <ExternalLink size={14} color="var(--accent)" />
                                 </a>
-                                <a
-                                    href={`https://${podId}-8001.proxy.runpod.net`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="glass"
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', textDecoration: 'none', color: 'white', borderRadius: '8px' }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <Terminal size={16} color="var(--accent)" />
-                                        <span>Raw Log Stream</span>
-                                    </div>
-                                    <ExternalLink size={14} color="var(--text-secondary)" />
+                                <a href={`https://${podId}-8001.proxy.runpod.net`} target="_blank" rel="noopener noreferrer" className="glass" style={{ padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', color: 'white', fontSize: '0.9rem' }}>
+                                    <span>Log Server GUI</span>
+                                    <ExternalLink size={14} color="var(--accent)" />
                                 </a>
                             </div>
                         </div>
                     )}
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="card" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--error)', color: 'var(--error)', padding: '16px', fontSize: '0.9rem', display: 'flex', gap: '10px' }}>
-                            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
-                            {error}
+                    {/* Info Card */}
+                    <div className="card glass" style={{ padding: '24px', background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <Info size={20} color="var(--accent)" style={{ flexShrink: 0 }} />
+                            <div>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '4px' }}>Pod Billing</h4>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                                    Your pod is billed while RUNNING. Remember to terminate it when you're finished to stop further charges.
+                                </p>
+                            </div>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </div>
     );
 }
+

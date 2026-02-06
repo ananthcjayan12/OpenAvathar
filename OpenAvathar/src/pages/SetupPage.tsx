@@ -10,12 +10,11 @@ import {
     Globe,
     CheckCircle2,
     ChevronRight,
-    Loader2,
     Info
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { runpodApi } from '@/services/runpodApi';
-import type { GPU, Purpose, CloudType } from '@/types';
+import type { GPU, Purpose } from '@/types';
 
 export default function SetupPage() {
     const navigate = useNavigate();
@@ -25,8 +24,9 @@ export default function SetupPage() {
         setPurpose,
         cloudType,
         setCloudType,
-        gpuType,
-        setGpuType
+        setPodId,
+        setPodStatus,
+        clearLogs
     } = useAppStore();
 
     const [availableGpus, setAvailableGpus] = useState<GPU[]>([]);
@@ -218,7 +218,13 @@ export default function SetupPage() {
 
                         <button
                             className="btn btn-primary"
-                            onClick={() => navigate('/deploy')}
+                            onClick={() => {
+                                // Reset state to ensure fresh deployment
+                                setPodId(null);
+                                setPodStatus('idle');
+                                clearLogs();
+                                navigate('/deploy');
+                            }}
                             disabled={!purpose}
                             style={{ width: '100%', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                         >

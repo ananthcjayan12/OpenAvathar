@@ -3,9 +3,7 @@ import { useAppStore } from '@/stores/appStore';
 import LandingPage from './pages/LandingPage';
 import SetupPage from './pages/SetupPage';
 import DeployPage from './pages/DeployPage';
-
-// Placeholder components for guarded routes
-const GeneratePlaceholder = () => <div className="container">Generate Page (Coming Soon)</div>;
+import GeneratePage from './pages/GeneratePage';
 
 function App() {
   const { apiKey, podId } = useAppStore();
@@ -26,7 +24,7 @@ function App() {
         />
         <Route
           path="/generate"
-          element={podId ? <GeneratePlaceholder /> : <Navigate to="/deploy" />}
+          element={podId ? <GeneratePage /> : <Navigate to="/deploy" />}
         />
 
         {/* Catch-all redirect */}

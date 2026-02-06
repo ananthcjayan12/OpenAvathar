@@ -148,6 +148,24 @@ export default function LandingPage() {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                             Don't have an API key? <a href="https://www.runpod.io/console/user/settings" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Get one on RunPod</a>
                         </p>
+                        <button
+                            onClick={() => {
+                                localStorage.clear();
+                                window.location.reload();
+                            }}
+                            style={{
+                                marginTop: '16px',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-secondary)',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                opacity: 0.6
+                            }}
+                        >
+                            Clear cached data & restart
+                        </button>
                     </div>
                 </div>
             </motion.div>

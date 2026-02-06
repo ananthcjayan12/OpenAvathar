@@ -70,6 +70,10 @@ export interface ComfyPromptResponse {
     node_errors?: Record<string, any>;
 }
 
+export interface ComfyQueueResponse {
+    prompt_id: string;
+}
+
 export interface PromptStatus {
     status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
     progress: number;
@@ -77,7 +81,7 @@ export interface PromptStatus {
 }
 
 export interface GenerationStatus {
-    step: 'idle' | 'uploading' | 'generating' | 'completed' | 'failed';
+    step: 'idle' | 'uploading' | 'queuing' | 'generating' | 'completed' | 'failed';
     error?: string;
 }
 
