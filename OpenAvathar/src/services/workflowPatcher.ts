@@ -45,7 +45,8 @@ class WorkflowPatcher {
 
             // Set max frames if provided
             if (config.maxFrames !== undefined) {
-                workflow["98"].inputs.num_frames = config.maxFrames;
+                workflow["98"].inputs.length = config.maxFrames;
+                console.log(`[WorkflowPatcher] Patched Wan2.2 node 98 length: ${config.maxFrames}`);
             }
         }
 
@@ -53,6 +54,7 @@ class WorkflowPatcher {
         // This might be in a different node - check the workflow JSON
         if (config.audioCfgScale !== undefined && workflow["98"]) {
             workflow["98"].inputs.audio_cfg_scale = config.audioCfgScale;
+            console.log(`[WorkflowPatcher] Patched Wan2.2 node 98 audio_cfg_scale: ${config.audioCfgScale}`);
         }
 
         return workflow;
@@ -84,35 +86,33 @@ class WorkflowPatcher {
 
         // 4. Set dimensions based on orientation
         // Node 245/246: Width and Height
-        if (config.orientation) {
-            if (config.orientation === 'horizontal') {
-                // Landscape mode
-                if (workflow["245"]) workflow["245"].inputs.value = 832;
-                if (workflow["246"]) workflow["246"].inputs.value = 480;
-            } else {
-                // Portrait mode (default)
-                if (workflow["245"]) workflow["245"].inputs.value = 480;
-                if (workflow["246"]) workflow["246"].inputs.value = 832;
-            }
-        } else {
-            // Default portrait
+        if (config.orientation === 'horizontal') {
+            // Landscape mode
+            if (workflow["245"]) workflow["245"].inputs.value = 832;
+            if (workflow["246"]) workflow["246"].inputs.value = 480;
+        } else if (config.orientation === 'vertical') {
+            // Portrait mode
             if (workflow["245"]) workflow["245"].inputs.value = 480;
             if (workflow["246"]) workflow["246"].inputs.value = 832;
+        } else {
+            // Default to portrait if orientation not specified
+            if (workflow["245"]) workflow["245"].inputs.value = 480;
+            if (workflow["246"]) workflow["246"].inputs.value = 832;
+            console.log('[WorkflowPatcher] No orientation specified, defaulting to portrait');
         }
 
         // 5. Set max frames if provided
-        // This might be in the InfiniteTalk node - check workflow JSON for the correct node
-        if (config.maxFrames !== undefined) {
-            // You may need to adjust the node ID based on your workflow
-            // Common nodes: InfiniteTalkNode or similar
-            if (workflow["241"]) {
-                workflow["241"].inputs.num_frames = config.maxFrames;
-            }
+        // Node 270: INTConstant (Max frames)
+        if (config.maxFrames !== undefined && workflow["270"]) {
+            workflow["270"].inputs.value = config.maxFrames;
+            console.log(`[WorkflowPatcher] Patched InfiniteTalk node 270 value: ${config.maxFrames}`);
         }
 
         // 6. Set audio CFG scale if provided
-        if (config.audioCfgScale !== undefined && workflow["241"]) {
-            workflow["241"].inputs.audio_cfg_scale = config.audioCfgScale;
+        // Audio CFG scale is typically on node 194 for this workflow
+        if (config.audioCfgScale !== undefined && workflow["194"]) {
+            workflow["194"].inputs.audio_cfg_scale = config.audioCfgScale;
+            console.log(`[WorkflowPatcher] Patched InfiniteTalk node 194 audio_cfg_scale: ${config.audioCfgScale}`);
         }
 
         return workflow;

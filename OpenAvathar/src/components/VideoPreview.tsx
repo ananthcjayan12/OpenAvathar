@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Download, Loader2 } from 'lucide-react';
+import { isMobile, canShare } from '../utils/device';
 
 interface VideoPreviewProps {
     comfyuiUrl: string;
@@ -55,16 +56,47 @@ export default function VideoPreview({ comfyuiUrl, filename, onClose }: VideoPre
         };
     }, [comfyuiUrl, filename]);
 
-    const handleDownload = () => {
+    const handleDownload = async () => {
         if (!videoUrl) return;
 
-        // Create a temporary anchor element to trigger download
-        const a = document.createElement('a');
-        a.href = videoUrl;
-        a.download = filename || 'generated_video.mp4';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const isMobileDevice = isMobile();
+
+        if (isMobileDevice) {
+            if (canShare()) {
+                try {
+                    // Fetch the blob again to get a fresh File object for sharing if needed
+                    // or just share the URL if it's a public URL (but here it's a blob URL)
+                    const response = await fetch(videoUrl);
+                    const blob = await response.blob();
+                    const file = new File([blob], filename || 'generated_video.mp4', { type: 'video/mp4' });
+
+                    await navigator.share({
+                        files: [file],
+                        title: 'Generated Video',
+                        text: 'Check out this AI generated video from OpenAvathar!'
+                    });
+                } catch (err: any) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Share failed:', err);
+                        window.open(videoUrl, '_blank');
+                    }
+                }
+            } else {
+                // Fallback for mobile without share API
+                const win = window.open(videoUrl, '_blank');
+                if (!win) {
+                    alert('Please allow popups to download on mobile, or long-press the video to save.');
+                }
+            }
+        } else {
+            // Desktop: Create a temporary anchor element to trigger download
+            const a = document.createElement('a');
+            a.href = videoUrl;
+            a.download = filename || 'generated_video.mp4';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
     };
 
     if (loading) {

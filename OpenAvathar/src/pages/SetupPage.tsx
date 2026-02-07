@@ -24,8 +24,7 @@ export default function SetupPage() {
         setPurpose,
         cloudType,
         setCloudType,
-        setPodId,
-        setPodStatus,
+        setActivePodId,
         clearLogs
     } = useAppStore();
 
@@ -226,8 +225,7 @@ export default function SetupPage() {
                             className="btn btn-primary"
                             onClick={() => {
                                 // Reset state to ensure fresh deployment
-                                setPodId(null);
-                                setPodStatus('idle');
+                                setActivePodId(null);
                                 clearLogs();
                                 navigate('/deploy');
                             }}

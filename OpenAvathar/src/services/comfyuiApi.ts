@@ -25,8 +25,8 @@ class ComfyUIService {
                 headers: {
                     // Don't set Content-Type - let browser set it with boundary
                 },
-                // Add timeout for large files
-                timeout: 60000, // 60 seconds
+                // Increased timeout for large files (especially audio files which can be 7MB+)
+                timeout: 300000, // 5 minutes
             });
 
             return response.data.name;
@@ -72,7 +72,7 @@ class ComfyUIService {
     /**
      * Polls ComfyUI history to check if a prompt has finished
      */
-    async getGenerationStatus(comfyuiUrl: string, promptId: string): Promise<{ status: 'completed' | 'failed' | 'running'; outputs?: Array<{ filename: string }> }> {
+    async getGenerationStatus(comfyuiUrl: string, promptId: string): Promise<{ status: 'completed' | 'failed' | 'running'; outputs?: Array<{ filename: string }>; error?: string }> {
         try {
             const response = await axios.get(`${comfyuiUrl}/history/${promptId}`, {
                 timeout: 10000, // 10 seconds
@@ -81,6 +81,16 @@ class ComfyUIService {
 
             if (!history) {
                 return { status: 'running' };
+            }
+
+            // Check for ComfyUI execution errors
+            if (history.status?.status_str === 'error' || history.exception_message) {
+                const errorMessage = history.exception_message || 'ComfyUI execution error';
+                console.error(`[ComfyUI] Job ${promptId} failed:`, errorMessage);
+                return {
+                    status: 'failed',
+                    error: errorMessage
+                };
             }
 
             const outputs = history.outputs;
@@ -96,13 +106,19 @@ class ComfyUIService {
                 }
             }
 
+            // If it's in history but has no outputs, it might still be running or failed without error msg
+            if (outputFiles.length === 0) {
+                console.log(`[ComfyUI] Job ${promptId} is in history but has no outputs yet.`);
+                return { status: 'running' };
+            }
+
             return {
                 status: 'completed',
                 outputs: outputFiles
             };
-        } catch (error) {
+        } catch (error: any) {
             console.error('ComfyUI Status Check Error:', error);
-            return { status: 'failed' };
+            return { status: 'failed', error: error.message };
         }
     }
 

@@ -22,15 +22,19 @@ export default function DeployPage() {
         purpose,
         cloudType,
         gpuType,
-        podId,
-        setPodId,
-        podStatus,
-        setPodStatus,
-        setUrls,
+        activePodId,
+        pods,
+        addPod,
+        updatePod,
+        removePod,
         logs,
         addLog,
         clearLogs
     } = useAppStore();
+
+    const activePod = activePodId ? pods[activePodId] : null;
+    const podId = activePod?.id || null;
+    const podStatus = activePod?.status || 'idle';
 
     const logEndRef = useRef<HTMLDivElement>(null);
     const deploymentStarted = useRef(false);
@@ -48,15 +52,17 @@ export default function DeployPage() {
             navigate('/');
             return;
         }
-        if (!podId && !purpose) {
+        // If we have a running pod for this purpose, we can stay here or go to generate
+        // But for now, if no purpose and no active pod, go back
+        if (!activePodId && !purpose) {
             navigate('/setup');
             return;
         }
-    }, [apiKey, purpose, podId, navigate]);
+    }, [apiKey, purpose, activePodId, navigate]);
 
     // Effect 2: Deployment
     useEffect(() => {
-        if (deploymentStarted.current || podId || !purpose || podStatus !== 'idle') {
+        if (deploymentStarted.current || activePodId || !purpose || podStatus !== 'idle') {
             return;
         }
 
@@ -68,14 +74,13 @@ export default function DeployPage() {
                 // Validate purpose
                 if (!purpose) {
                     setError('No purpose selected');
-                    setPodStatus('failed');
+                    // We don't have a pod yet to set status on
                     return;
                 }
 
                 // Clear old logs
                 useAppStore.getState().clearLogs();
 
-                setPodStatus('deploying');
                 setDeploymentStep('Requesting GPU Pod from RunPod...');
 
                 const TEMPLATES = {
@@ -94,11 +99,23 @@ export default function DeployPage() {
 
                 console.log('[DeployPage] Pod created successfully:', pod.id);
                 addLog(`[SYSTEM] New Pod created: ${pod.id}`);
-                setPodId(pod.id);
+
+                // Add the new pod to the store
+                addPod({
+                    id: pod.id,
+                    name: `OpenAvathar-${purpose}`,
+                    purpose: purpose,
+                    status: 'deploying',
+                    comfyuiUrl: null,
+                    logServerUrl: null,
+                    gpuType: gpuType || 'NVIDIA GeForce RTX 4090',
+                    createdAt: Date.now(),
+                    lastUsedAt: Date.now()
+                });
             } catch (err: any) {
                 console.error('[DeployPage] Deployment error:', err);
                 setError(err.message || 'Failed to deploy pod');
-                setPodStatus('failed');
+                // Since we didn't even create the pod in the store yet, we just show error
             }
         };
 
@@ -107,11 +124,11 @@ export default function DeployPage() {
 
     // Effect 3: Monitoring
     useEffect(() => {
-        if (!podId || !apiKey || podStatus === 'running') {
+        if (!activePodId || !apiKey || podStatus === 'running') {
             return;
         }
 
-        console.log('[DeployPage] Initializing monitor for:', podId);
+        console.log('[DeployPage] Initializing monitor for:', activePodId);
         setDeploymentStep('Waiting for container to start...');
 
         const MAX_POLL_ATTEMPTS = 60; // 5 minutes
@@ -122,32 +139,35 @@ export default function DeployPage() {
             if (attempts > MAX_POLL_ATTEMPTS) {
                 clearInterval(pollInterval);
                 setError('Deployment timed out after 5 minutes');
-                setPodStatus('failed');
+                updatePod(activePodId, { status: 'failed' });
                 return;
             }
 
             try {
-                console.log('[DeployPage] Polling status for:', podId, `(attempt ${attempts}/${MAX_POLL_ATTEMPTS})`);
-                const status = await runpodApi.getPodStatus(apiKey, podId);
+                console.log('[DeployPage] Polling status for:', activePodId, `(attempt ${attempts}/${MAX_POLL_ATTEMPTS})`);
+                const status = await runpodApi.getPodStatus(apiKey, activePodId);
 
                 if (status.desiredStatus === 'RUNNING' && status.runtime) {
                     console.log('[DeployPage] Pod is RUNNING, checking services...');
-                    const comfyUrl = `https://${podId}-8188.proxy.runpod.net`;
-                    const logUrl = `https://${podId}-8001.proxy.runpod.net`;
-                    setUrls(comfyUrl, logUrl);
+                    const comfyUrl = `https://${activePodId}-8188.proxy.runpod.net`;
+                    const logUrl = `https://${activePodId}-8001.proxy.runpod.net`;
 
-                    setPodStatus('running');
+                    updatePod(activePodId, {
+                        status: 'running',
+                        comfyuiUrl: comfyUrl,
+                        logServerUrl: logUrl
+                    });
+
                     setDeploymentStep('Pod is Ready!');
                     clearInterval(pollInterval);
 
-                    logStream.connect(podId, (line) => addLog(line));
+                    logStream.connect(activePodId, (line) => addLog(line));
                 }
             } catch (err: any) {
                 console.error('[DeployPage] Polling error:', err);
                 if (err.response?.status === 404 || err.message?.includes('not found')) {
                     clearInterval(pollInterval);
-                    setPodId(null);
-                    setPodStatus('idle');
+                    removePod(activePodId);
                     setError('Pod no longer exists.');
                 }
             }
@@ -156,18 +176,17 @@ export default function DeployPage() {
         return () => {
             clearInterval(pollInterval);
         };
-    }, [podId, apiKey]);
+    }, [activePodId, apiKey, podStatus]);
 
     const handleStop = async () => {
-        if (!podId || !apiKey) return;
+        if (!activePodId || !apiKey) return;
 
         const confirmStop = window.confirm('Are you sure you want to stop and terminate this pod? You will lose any unsaved progress and billing will stop.');
         if (!confirmStop) return;
 
         try {
-            await runpodApi.terminatePod(apiKey, podId);
-            setPodId(null);
-            setPodStatus('idle');
+            await runpodApi.terminatePod(apiKey, activePodId);
+            removePod(activePodId);
             navigate('/setup');
         } catch (err: any) {
             alert('Failed to terminate pod: ' + err.message);

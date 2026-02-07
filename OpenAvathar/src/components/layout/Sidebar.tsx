@@ -4,7 +4,6 @@ import {
     Rocket,
     Wand2,
     ChevronRight,
-    Github,
     LogOut,
     X
 } from 'lucide-react';
@@ -16,16 +15,16 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const { podId, clearAuth } = useAppStore();
+    const { activePodId, clearAuth } = useAppStore();
 
     const navItems = [
-        { path: '/setup', label: 'Setup', icon: <Settings size={18} /> },
-        { path: '/deploy', label: 'GPU Pod', icon: <Rocket size={18} /> },
+        { path: '/dashboard', label: 'Dashboard', icon: <Rocket size={18} /> },
+        { path: '/setup', label: 'New Pod', icon: <Settings size={18} /> },
         {
             path: '/generate',
             label: 'Generator',
             icon: <Wand2 size={18} />,
-            disabled: !podId
+            disabled: !activePodId
         },
     ];
 
@@ -118,26 +117,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     paddingTop: '20px',
                     borderTop: '1px solid var(--border)'
                 }}>
-                    <a
-                        href="https://github.com/OpenAvathar"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
+                    <NavLink
+                        to="/docs"
+                        onClick={() => onClose?.()}
+                        style={({ isActive }) => ({
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
                             padding: '10px 14px',
-                            color: 'var(--text-secondary)',
+                            color: isActive ? 'white' : 'var(--text-secondary)',
                             textDecoration: 'none',
                             fontSize: '0.9rem',
                             borderRadius: '8px',
-                            transition: 'background 0.2s'
-                        }}
+                            transition: 'background 0.2s',
+                            background: isActive ? 'var(--accent)' : 'transparent'
+                        })}
                         className="hover-bg"
                     >
-                        <Github size={18} />
+                        <Settings size={18} />
                         <span>Documentation</span>
-                    </a>
+                    </NavLink>
 
                     <button
                         onClick={() => {

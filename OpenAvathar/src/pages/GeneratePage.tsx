@@ -10,7 +10,8 @@ import {
     AlertTriangle,
     Play,
     Film,
-    Trash2
+    Trash2,
+    Rocket
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { comfyuiApi } from '@/services/comfyuiApi';
@@ -19,7 +20,9 @@ import VideoPreview from '@/components/VideoPreview';
 
 export default function GeneratePage() {
     const {
-        comfyuiUrl,
+        activePodId,
+        pods,
+        setActivePodId,
         purpose,
         currentPromptId,
         setCurrentPromptId,
@@ -34,6 +37,9 @@ export default function GeneratePage() {
         addGeneratedVideo,
         clearVideoHistory
     } = useAppStore();
+
+    const activePod = activePodId ? pods[activePodId] : null;
+    const comfyuiUrl = activePod?.comfyuiUrl;
 
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [selectedAudio, setSelectedAudio] = useState<File | null>(null);
@@ -129,15 +135,49 @@ export default function GeneratePage() {
         setGenerationStatus('uploading');
 
         try {
-            // 1. Upload Files
-            const imageFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedImage);
+            // Upload Files with retry logic (no compression to preserve quality)
+            let imageFilename: string = '';
+            let uploadAttempts = 0;
+            const maxAttempts = 3;
+
+            while (uploadAttempts < maxAttempts) {
+                try {
+                    console.log(`[GeneratePage] Image upload attempt ${uploadAttempts + 1}/${maxAttempts}`);
+                    imageFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedImage);
+                    console.log('[GeneratePage] Image uploaded successfully:', imageFilename);
+                    break;
+                } catch (uploadErr: any) {
+                    uploadAttempts++;
+                    if (uploadAttempts >= maxAttempts) {
+                        throw new Error(`Upload failed after ${maxAttempts} attempts: ${uploadErr.message}`);
+                    }
+                    console.warn(`[GeneratePage] Upload attempt ${uploadAttempts} failed, retrying in 3 seconds...`);
+                    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3s before retry
+                }
+            }
 
             let audioFilename = '';
             if (purpose === 'infinitetalk' && selectedAudio) {
-                audioFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedAudio);
+                // Audio upload with retry (no compression to preserve quality)
+                uploadAttempts = 0;
+                while (uploadAttempts < maxAttempts) {
+                    try {
+                        console.log(`[GeneratePage] Audio upload attempt ${uploadAttempts + 1}/${maxAttempts}`);
+                        audioFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedAudio);
+                        console.log('[GeneratePage] Audio uploaded successfully:', audioFilename);
+                        break;
+                    } catch (uploadErr: any) {
+                        uploadAttempts++;
+                        if (uploadAttempts >= maxAttempts) {
+                            throw new Error(`Audio upload failed after ${maxAttempts} attempts: ${uploadErr.message}`);
+                        }
+                        console.warn(`[GeneratePage] Audio upload attempt ${uploadAttempts} failed, retrying in 3 seconds...`);
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    }
+                }
             }
 
-            // 2. Patch Workflow with generation settings
+            // Patch Workflow with generation settings
             setGenerationStatus('queuing');
             const patchedWorkflow = await workflowPatcher.patchWorkflow(purpose!, {
                 imageName: imageFilename,
@@ -195,7 +235,7 @@ export default function GeneratePage() {
                 } else if (status.status === 'failed') {
                     clearInterval(poll);
                     setGenerationStatus('failed');
-                    setError('Generation failed on server');
+                    setError(status.error || 'Generation failed on server');
                 }
 
                 if (attempts >= maxAttempts) {
@@ -232,6 +272,71 @@ export default function GeneratePage() {
                     {purpose === 'wan2.2' ? 'Transform images into dynamic videos' : 'Create talking head videos with audio'}
                 </p>
             </header>
+
+            {/* Pod Selector */}
+            {generationStatus === 'idle' && (
+                <div style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: '16px 20px',
+                    marginBottom: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '20px',
+                    flexWrap: 'wrap',
+                    maxWidth: '1200px',
+                    margin: '0 auto 30px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '10px',
+                            background: 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                        }}>
+                            <Rocket size={18} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.75rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Pod</div>
+                            <div style={{ fontWeight: 600 }}>{activePod?.name || 'No Pod Selected'}</div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Switch Pod:</span>
+                        <select
+                            value={activePodId || ''}
+                            onChange={(e) => setActivePodId(e.target.value)}
+                            style={{
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid var(--border)',
+                                color: 'white',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                fontSize: '0.9rem',
+                                minWidth: '200px',
+                                outline: 'none'
+                            }}
+                        >
+                            <option value="" disabled>Select a pod...</option>
+                            {Object.values(pods)
+                                .filter(p => !purpose || p.purpose === purpose)
+                                .map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} ({p.status}) - {p.purpose.toUpperCase()}
+                                    </option>
+                                ))
+                            }
+                        </select>
+                    </div>
+                </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: generationStatus === 'idle' ? '1fr 1fr' : '1fr', gap: '30px', maxWidth: generationStatus === 'idle' ? '100%' : '800px', margin: '0 auto' }} className="responsive-gen-layout">
                 <style>{`

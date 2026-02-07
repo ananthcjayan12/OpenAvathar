@@ -31,14 +31,38 @@ export default function LandingPage() {
 
                 // Check for existing pods
                 const pods = await runpodApi.getPods(keyInput.trim());
-                const activePod = pods.find(p =>
-                    p.name.startsWith('OpenAvathar-') &&
+                const openAvatharPods = pods.filter(p =>
+                    p.name.toLowerCase().startsWith('openavathar-') &&
                     p.desiredStatus !== 'TERMINATED'
                 );
 
-                if (activePod) {
-                    useAppStore.getState().setPodId(activePod.id);
-                    navigate('/deploy');
+                if (openAvatharPods.length > 0) {
+                    openAvatharPods.forEach(p => {
+                        const purpose = p.name.toLowerCase().includes('wan2.2') ? 'wan2.2' : 'infinitetalk';
+
+                        // Determine status based on desiredStatus and runtime
+                        let status: 'idle' | 'deploying' | 'running' | 'stopping' | 'failed' = 'deploying';
+                        if (p.desiredStatus === 'TERMINATED' || p.desiredStatus === 'EXITED') {
+                            status = 'failed';
+                        } else if (p.runtime && p.desiredStatus === 'RUNNING') {
+                            status = 'running';
+                        } else if (p.desiredStatus === 'RUNNING' && !p.runtime) {
+                            status = 'deploying';
+                        }
+
+                        useAppStore.getState().addPod({
+                            id: p.id,
+                            name: p.name,
+                            purpose: purpose as any,
+                            status: status,
+                            comfyuiUrl: p.id ? `https://${p.id}-8188.proxy.runpod.net` : null,
+                            logServerUrl: p.id ? `https://${p.id}-8001.proxy.runpod.net` : null,
+                            gpuType: 'NVIDIA GeForce RTX 4090',
+                            createdAt: Date.now(),
+                            lastUsedAt: Date.now()
+                        });
+                    });
+                    navigate('/dashboard');
                 } else {
                     navigate('/setup');
                 }

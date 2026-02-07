@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Purpose, CloudType, GenerationStatus } from '../types';
+import type { Purpose, CloudType, GenerationStatus, AppPod } from '../types';
 
 export interface GeneratedVideo {
     id: string;
@@ -21,11 +21,9 @@ interface AppState {
     cloudType: CloudType;
     gpuType: string;
 
-    // Pod State
-    podId: string | null;
-    podStatus: 'idle' | 'deploying' | 'running' | 'stopping' | 'failed';
-    comfyuiUrl: string | null;
-    logServerUrl: string | null;
+    // Pod Management (Persisted)
+    pods: Record<string, AppPod>;
+    activePodId: string | null;
 
     // Generation Settings
     videoOrientation: 'horizontal' | 'vertical';
@@ -49,9 +47,13 @@ interface AppState {
     setPurpose: (purpose: Purpose | null) => void;
     setCloudType: (type: CloudType) => void;
     setGpuType: (type: string) => void;
-    setPodId: (id: string | null) => void;
-    setPodStatus: (status: AppState['podStatus']) => void;
-    setUrls: (comfyui: string | null, logServer: string | null) => void;
+
+    // Pod Actions
+    addPod: (pod: AppPod) => void;
+    updatePod: (podId: string, updates: Partial<AppPod>) => void;
+    removePod: (podId: string) => void;
+    setActivePodId: (podId: string | null) => void;
+
     setVideoOrientation: (orientation: 'horizontal' | 'vertical') => void;
     setMaxFrames: (frames: number) => void;
     setAudioCfgScale: (scale: number) => void;
@@ -75,12 +77,10 @@ export const useAppStore = create<AppState>()(
             purpose: null,
             cloudType: 'SECURE',
             gpuType: 'NVIDIA GeForce RTX 4090',
-            podId: null,
-            podStatus: 'idle',
-            comfyuiUrl: null,
-            logServerUrl: null,
+            pods: {},
+            activePodId: null,
             videoOrientation: 'horizontal',
-            maxFrames: 120,
+            maxFrames: 100, // Updated default (4s at 25fps)
             audioCfgScale: 3.5,
             currentPromptId: null,
             generationStatus: 'idle',
@@ -94,9 +94,30 @@ export const useAppStore = create<AppState>()(
             setPurpose: (purpose) => set({ purpose }),
             setCloudType: (cloudType) => set({ cloudType }),
             setGpuType: (gpuType) => set({ gpuType }),
-            setPodId: (podId) => set({ podId }),
-            setPodStatus: (podStatus) => set({ podStatus }),
-            setUrls: (comfyuiUrl, logServerUrl) => set({ comfyuiUrl, logServerUrl }),
+
+            // Pod Actions
+            addPod: (pod) =>
+                set((state) => ({
+                    pods: { ...state.pods, [pod.id]: pod },
+                    activePodId: pod.id,
+                })),
+            updatePod: (podId, updates) =>
+                set((state) => ({
+                    pods: {
+                        ...state.pods,
+                        [podId]: state.pods[podId] ? { ...state.pods[podId], ...updates } : state.pods[podId],
+                    },
+                })),
+            removePod: (podId) =>
+                set((state) => {
+                    const { [podId]: removed, ...remainingPods } = state.pods;
+                    return {
+                        pods: remainingPods,
+                        activePodId: state.activePodId === podId ? null : state.activePodId,
+                    };
+                }),
+            setActivePodId: (activePodId) => set({ activePodId }),
+
             setVideoOrientation: (videoOrientation) => set({ videoOrientation }),
             setMaxFrames: (maxFrames) => set({ maxFrames }),
             setAudioCfgScale: (audioCfgScale) => set({ audioCfgScale }),
@@ -117,10 +138,8 @@ export const useAppStore = create<AppState>()(
                 set({
                     apiKey: null,
                     isValidated: false,
-                    podId: null,
-                    podStatus: 'idle',
-                    comfyuiUrl: null,
-                    logServerUrl: null,
+                    pods: {},
+                    activePodId: null,
                     currentPromptId: null,
                     generationStatus: 'idle',
                     outputVideo: null,
@@ -133,10 +152,8 @@ export const useAppStore = create<AppState>()(
                     apiKey: null,
                     isValidated: false,
                     purpose: null,
-                    podId: null,
-                    podStatus: 'idle',
-                    comfyuiUrl: null,
-                    logServerUrl: null,
+                    pods: {},
+                    activePodId: null,
                     currentPromptId: null,
                     generationStatus: 'idle',
                     outputVideo: null,
@@ -153,9 +170,8 @@ export const useAppStore = create<AppState>()(
                 purpose: state.purpose,
                 cloudType: state.cloudType,
                 gpuType: state.gpuType,
-                podId: state.podId,
-                comfyuiUrl: state.comfyuiUrl,
-                logServerUrl: state.logServerUrl,
+                pods: state.pods,
+                activePodId: state.activePodId,
                 videoOrientation: state.videoOrientation,
                 maxFrames: state.maxFrames,
                 audioCfgScale: state.audioCfgScale,

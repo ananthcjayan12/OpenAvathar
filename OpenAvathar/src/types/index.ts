@@ -11,7 +11,7 @@ export type CloudType = 'SECURE' | 'COMMUNITY';
 export interface Pod {
     id: string;
     name: string;
-    desiredStatus: 'RUNNING' | 'DEPLOYING' | 'TERMINATED' | 'UNKNOWN';
+    desiredStatus: 'RUNNING' | 'DEPLOYING' | 'TERMINATED' | 'EXITED' | 'UNKNOWN';
     imageName?: string;
     runtime?: {
         uptimeInSeconds: number;
@@ -23,6 +23,18 @@ export interface Pod {
             type: string;
         }>;
     };
+}
+
+export interface AppPod {
+    id: string;
+    name: string;
+    purpose: Purpose;
+    status: 'idle' | 'deploying' | 'running' | 'stopping' | 'failed';
+    comfyuiUrl: string | null;
+    logServerUrl: string | null;
+    gpuType: string;
+    createdAt: number;
+    lastUsedAt: number;
 }
 
 export interface PodStatus {
