@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - prod
   workflow_dispatch:  # Allow manual triggers
 
 env:
