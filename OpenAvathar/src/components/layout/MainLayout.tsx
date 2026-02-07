@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
 
 interface MainLayoutProps {
@@ -6,17 +7,27 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
-            <Sidebar />
-            <main style={{
-                flexGrow: 1,
-                marginLeft: '260px',
-                padding: '0',
-                height: '100vh',
-                overflowY: 'auto',
-                position: 'relative'
-            }}>
+        <div className="layout-wrapper">
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+            {/* Mobile Header */}
+            <div className="mobile-header">
+                <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="btn-icon"
+                >
+                    <Menu size={24} color="var(--text-primary)" />
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'white' }}>OpenAvathar</span>
+                </div>
+                <div style={{ width: '24px' }}></div> {/* Spacer for centering */}
+            </div>
+
+            <main className="layout-main">
                 {children}
             </main>
         </div>

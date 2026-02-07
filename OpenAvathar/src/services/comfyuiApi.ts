@@ -149,48 +149,85 @@ class ComfyUIService {
      */
     async getOutputVideos(comfyuiUrl: string): Promise<Array<{ id: string; filename: string; url: string; timestamp: number }>> {
         try {
+            console.log('[ComfyUI] Fetching history from:', `${comfyuiUrl}/history`);
             const response = await axios.get(`${comfyuiUrl}/history`, {
                 timeout: 10000,
             });
 
+            console.log('[ComfyUI] History response:', response.data);
             const videos: Array<{ id: string; filename: string; url: string; timestamp: number }> = [];
             const history = response.data;
 
             // Iterate through all prompt IDs in history
             for (const promptId in history) {
                 const item = history[promptId];
+                console.log(`[ComfyUI] Processing prompt ${promptId}:`, item);
                 const outputs = item.outputs;
 
-                if (!outputs) continue;
+                if (!outputs) {
+                    console.log(`[ComfyUI] No outputs for prompt ${promptId}`);
+                    continue;
+                }
 
                 // Look for video outputs in each node
                 for (const nodeId in outputs) {
                     const nodeOutput = outputs[nodeId];
-                    const media = nodeOutput.gifs?.[0] || nodeOutput.videos?.[0];
+                    console.log(`[ComfyUI] Node ${nodeId} output:`, nodeOutput);
 
-                    if (media && media.filename) {
-                        const filename = media.subfolder ? `${media.subfolder}/${media.filename}` : media.filename;
-                        const url = this.getOutputUrl(comfyuiUrl, filename);
+                    // Check all possible media arrays (gifs, videos, images)
+                    // Different workflows may use different output types
+                    const mediaArrays = [
+                        nodeOutput.gifs,
+                        nodeOutput.videos,
+                        nodeOutput.images
+                    ].filter(arr => arr && arr.length > 0);
 
-                        // Use prompt creation time if available, otherwise use current time
-                        const timestamp = item.prompt?.[1] ? item.prompt[1] * 1000 : Date.now();
+                    // Process all media files in all arrays
+                    for (const mediaArray of mediaArrays) {
+                        for (const media of mediaArray) {
+                            if (media && media.filename) {
+                                // Check if it's a video file by extension
+                                const isVideo = /\.(mp4|webm|mov|avi|mkv|gif)$/i.test(media.filename);
 
-                        console.log('Found video:', { promptId, filename, url });
+                                if (isVideo) {
+                                    const filename = media.subfolder ? `${media.subfolder}/${media.filename}` : media.filename;
+                                    const url = this.getOutputUrl(comfyuiUrl, filename);
 
-                        videos.push({
-                            id: promptId,
-                            filename,
-                            url,
-                            timestamp
-                        });
+                                    // Use prompt creation time if available, otherwise use current time
+                                    const timestamp = item.prompt?.[1] ? item.prompt[1] * 1000 : Date.now();
+
+                                    console.log('[ComfyUI] Found video:', { promptId, filename, url, timestamp });
+
+                                    videos.push({
+                                        id: `${promptId}-${filename}`, // Use unique ID to avoid duplicates
+                                        filename,
+                                        url,
+                                        timestamp
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    if (mediaArrays.length === 0) {
+                        console.log(`[ComfyUI] No media arrays found in node ${nodeId}`);
                     }
                 }
             }
 
+            console.log('[ComfyUI] Total videos found:', videos.length);
+
+            // Remove duplicates based on filename
+            const uniqueVideos = Array.from(
+                new Map(videos.map(v => [v.filename, v])).values()
+            );
+
+            console.log('[ComfyUI] Unique videos after deduplication:', uniqueVideos.length);
+
             // Sort by timestamp, newest first
-            return videos.sort((a, b) => b.timestamp - a.timestamp);
+            return uniqueVideos.sort((a, b) => b.timestamp - a.timestamp);
         } catch (error) {
-            console.error('Failed to fetch output videos:', error);
+            console.error('[ComfyUI] Failed to fetch output videos:', error);
             return [];
         }
     }
