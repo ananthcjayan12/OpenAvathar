@@ -106,6 +106,19 @@ export default function GeneratePage() {
         const file = e.target.files?.[0];
         if (file) {
             setSelectedAudio(file);
+
+            // Calculate duration if purpose is infinitetalk
+            if (purpose === 'infinitetalk') {
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(file);
+                audio.onloadedmetadata = () => {
+                    const duration = audio.duration;
+                    const frames = Math.ceil(duration * 25); // assuming 25 fps
+                    console.log(`[Audio] Duration: ${duration}s, Calculated Frames: ${frames}`);
+                    useAppStore.getState().setMaxFrames(frames);
+                    URL.revokeObjectURL(audio.src);
+                };
+            }
         }
     };
 
@@ -368,18 +381,20 @@ export default function GeneratePage() {
                                 </button>
                             </div>
 
-                            {/* Max Frames */}
+                            {/* Video Duration */}
                             <div className="flex-between" style={{ marginBottom: '10px' }}>
-                                <label className="text-secondary" style={{ fontSize: '0.85rem' }}>Duration (Frames)</label>
-                                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem' }}>{maxFrames}</span>
+                                <label className="text-secondary" style={{ fontSize: '0.85rem' }}>Duration (Seconds)</label>
+                                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem' }}>
+                                    {(maxFrames / 25).toFixed(1)}s <span style={{ opacity: 0.6, fontSize: '0.8rem', fontWeight: 400 }}>({maxFrames} frames)</span>
+                                </span>
                             </div>
                             <input
                                 type="range"
-                                min="30"
-                                max="240"
-                                step="10"
-                                value={maxFrames}
-                                onChange={(e) => useAppStore.getState().setMaxFrames(Number(e.target.value))}
+                                min="1"
+                                max="360"
+                                step="0.5"
+                                value={maxFrames / 25}
+                                onChange={(e) => useAppStore.getState().setMaxFrames(Math.round(Number(e.target.value) * 25))}
                                 style={{
                                     width: '100%',
                                     marginBottom: '24px',
@@ -664,6 +679,6 @@ export default function GeneratePage() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
