@@ -248,6 +248,23 @@ class ComfyUIService {
         }
     }
 
+
+    /**
+     * Interrupt/cancel a running generation
+     * ComfyUI API: POST /interrupt
+     */
+    async interruptGeneration(comfyuiUrl: string): Promise<void> {
+        try {
+            await axios.post(`${comfyuiUrl}/interrupt`, {}, {
+                timeout: 5000, // 5 seconds
+            });
+            console.log('[ComfyUI] Generation interrupted successfully');
+        } catch (error: any) {
+            console.error('[ComfyUI] Failed to interrupt generation:', error);
+            // Don't throw - interruption is best-effort
+        }
+    }
+
     /**
      * Helper to construct the view/download URL for an output file
      */

@@ -175,10 +175,21 @@ export default function DashboardPage() {
                                     <Terminal size={18} />
                                 </button>
                                 <button
-                                    onClick={() => removePod(pod.id)}
+                                    onClick={async () => {
+                                        if (confirm(`Terminate pod ${pod.name}? This will stop the instance and you'll be charged for usage.`)) {
+                                            try {
+                                                await runpodApi.terminatePod(apiKey!, pod.id);
+                                                removePod(pod.id);
+                                            } catch (err) {
+                                                console.error('Failed to terminate pod:', err);
+                                                alert('Failed to terminate pod. It may have already been terminated.');
+                                                removePod(pod.id); // Remove from UI anyway
+                                            }
+                                        }
+                                    }}
                                     className="btn-secondary"
                                     style={{ width: '40px', height: '40px', padding: 0, borderRadius: '10px', color: 'var(--error)' }}
-                                    title="Remove from dashboard"
+                                    title="Terminate pod"
                                 >
                                     <Trash2 size={18} />
                                 </button>

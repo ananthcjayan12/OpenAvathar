@@ -30,10 +30,19 @@ interface AppState {
     maxFrames: number;
     audioCfgScale: number;
 
-    // Generation State
+    // Legacy Generation State (being migrated to jobQueue)
     currentPromptId: string | null;
     generationStatus: GenerationStatus['step'];
     outputVideo: string | null;
+
+    // Job Queue Integration
+    activeJobId: string | null; // Currently focused job in UI (not blocking)
+
+    // License & Trial State (Persisted)
+    isLicensed: boolean;
+    licenseKey: string | null;
+    freeTrialUsed: boolean;
+    generationCount: number;
 
     // Video History
     generatedVideos: GeneratedVideo[];
@@ -66,6 +75,15 @@ interface AppState {
     clearLogs: () => void;
     clearAuth: () => void;
     reset: () => void;
+
+    // Job Queue Actions
+    setActiveJobId: (jobId: string | null) => void;
+
+    // License Actions
+    setLicenseKey: (key: string | null) => void;
+    setLicensed: (licensed: boolean) => void;
+    markTrialUsed: () => void;
+    incrementGenerationCount: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -81,10 +99,15 @@ export const useAppStore = create<AppState>()(
             activePodId: null,
             videoOrientation: 'horizontal',
             maxFrames: 100, // Updated default (4s at 25fps)
-            audioCfgScale: 3.5,
+            audioCfgScale: 1.0,
             currentPromptId: null,
             generationStatus: 'idle',
             outputVideo: null,
+            activeJobId: null,
+            isLicensed: false,
+            licenseKey: null,
+            freeTrialUsed: false,
+            generationCount: 0,
             generatedVideos: [],
             logs: [],
 
@@ -134,6 +157,16 @@ export const useAppStore = create<AppState>()(
                     logs: [...state.logs.slice(-999), line],
                 })),
             clearLogs: () => set({ logs: [] }),
+
+            // Job Queue Actions
+            setActiveJobId: (activeJobId) => set({ activeJobId }),
+
+            // License Actions
+            setLicenseKey: (licenseKey) => set({ licenseKey, isLicensed: !!licenseKey }),
+            setLicensed: (isLicensed) => set({ isLicensed }),
+            markTrialUsed: () => set({ freeTrialUsed: true }),
+            incrementGenerationCount: () =>
+                set((state) => ({ generationCount: state.generationCount + 1 })),
             clearAuth: () => {
                 set({
                     apiKey: null,
@@ -176,6 +209,11 @@ export const useAppStore = create<AppState>()(
                 maxFrames: state.maxFrames,
                 audioCfgScale: state.audioCfgScale,
                 generatedVideos: state.generatedVideos,
+                // License state (persisted)
+                isLicensed: state.isLicensed,
+                licenseKey: state.licenseKey,
+                freeTrialUsed: state.freeTrialUsed,
+                generationCount: state.generationCount,
             }),
         }
     )

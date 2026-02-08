@@ -11,12 +11,15 @@ import {
     Play,
     Film,
     Trash2,
-    Rocket
+    Rocket,
+    ListPlus
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { useJobQueue } from '@/stores/jobQueue';
 import { comfyuiApi } from '@/services/comfyuiApi';
-import { workflowPatcher } from '@/services/workflowPatcher';
+import { jobProcessor } from '@/services/jobProcessor';
 import VideoPreview from '@/components/VideoPreview';
+import JobQueuePanel from '@/components/JobQueuePanel';
 
 export default function GeneratePage() {
     const {
@@ -34,7 +37,6 @@ export default function GeneratePage() {
         maxFrames,
         audioCfgScale,
         generatedVideos,
-        addGeneratedVideo,
         clearVideoHistory
     } = useAppStore();
 
@@ -48,6 +50,12 @@ export default function GeneratePage() {
     const [error, setError] = useState<string | null>(null);
     const [allVideos, setAllVideos] = useState<Array<{ id: string; filename: string; url: string; timestamp: number; orientation?: 'horizontal' | 'vertical'; purpose?: string }>>([]);
     const [isLoadingVideos, setIsLoadingVideos] = useState(false);
+    const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
+
+    // Job queue state
+    const addJob = useJobQueue((s) => s.addJob);
+    const totalJobs = useJobQueue((s) => Object.keys(s.jobs).length);
+    const isPodBusy = activePodId ? !jobProcessor.isPodAvailable(activePodId) : false;
 
     const imageInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
@@ -129,131 +137,47 @@ export default function GeneratePage() {
     };
 
     const handleGenerate = async () => {
-        if (!comfyuiUrl || !selectedImage) return;
+        if (!comfyuiUrl || !selectedImage || !activePodId) return;
 
-        setError(null);
-        setGenerationStatus('uploading');
-
-        try {
-            // Upload Files with retry logic (no compression to preserve quality)
-            let imageFilename: string = '';
-            let uploadAttempts = 0;
-            const maxAttempts = 3;
-
-            while (uploadAttempts < maxAttempts) {
-                try {
-                    console.log(`[GeneratePage] Image upload attempt ${uploadAttempts + 1}/${maxAttempts}`);
-                    imageFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedImage);
-                    console.log('[GeneratePage] Image uploaded successfully:', imageFilename);
-                    break;
-                } catch (uploadErr: any) {
-                    uploadAttempts++;
-                    if (uploadAttempts >= maxAttempts) {
-                        throw new Error(`Upload failed after ${maxAttempts} attempts: ${uploadErr.message}`);
-                    }
-                    console.warn(`[GeneratePage] Upload attempt ${uploadAttempts} failed, retrying in 3 seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3s before retry
-                }
-            }
-
-            let audioFilename = '';
-            if (purpose === 'infinitetalk' && selectedAudio) {
-                // Audio upload with retry (no compression to preserve quality)
-                uploadAttempts = 0;
-                while (uploadAttempts < maxAttempts) {
-                    try {
-                        console.log(`[GeneratePage] Audio upload attempt ${uploadAttempts + 1}/${maxAttempts}`);
-                        audioFilename = await comfyuiApi.uploadFile(comfyuiUrl, selectedAudio);
-                        console.log('[GeneratePage] Audio uploaded successfully:', audioFilename);
-                        break;
-                    } catch (uploadErr: any) {
-                        uploadAttempts++;
-                        if (uploadAttempts >= maxAttempts) {
-                            throw new Error(`Audio upload failed after ${maxAttempts} attempts: ${uploadErr.message}`);
-                        }
-                        console.warn(`[GeneratePage] Audio upload attempt ${uploadAttempts} failed, retrying in 3 seconds...`);
-                        await new Promise(resolve => setTimeout(resolve, 3000));
-                    }
-                }
-            }
-
-            // Patch Workflow with generation settings
-            setGenerationStatus('queuing');
-            const patchedWorkflow = await workflowPatcher.patchWorkflow(purpose!, {
-                imageName: imageFilename,
-                audioName: audioFilename,
+        // Check if we should use the job queue system (new method)
+        // For now, use job queue for all new generations
+        const jobId = addJob(
+            {
+                imageFile: selectedImage,
+                audioFile: selectedAudio || undefined,
                 prompt: prompt || 'high quality video',
-                width: videoOrientation === 'horizontal' ? 1024 : 576,
-                height: videoOrientation === 'horizontal' ? 576 : 1024,
                 orientation: videoOrientation,
                 maxFrames: maxFrames,
-                audioCfgScale: audioCfgScale
-            });
+                workflowType: purpose!,
+                audioCfgScale: audioCfgScale,
+            },
+            activePodId
+        );
 
-            // 3. Queue Workflow
-            const response = await comfyuiApi.queueWorkflow(comfyuiUrl, patchedWorkflow);
-            setCurrentPromptId(response.prompt_id);
-            setGenerationStatus('generating');
-
-            // 4. Poll for Completion
-            pollForCompletion(response.prompt_id);
-        } catch (err: any) {
-            setError(err.message || 'Generation failed');
-            setGenerationStatus('failed');
+        // Start processing if pod is available
+        if (!isPodBusy) {
+            jobProcessor.processJob(jobId);
         }
+
+        // Reset form for next upload
+        setSelectedImage(null);
+        setSelectedAudio(null);
+        setImagePreview(null);
+        setPrompt('');
+        setError(null);
     };
 
-    const pollForCompletion = async (promptId: string) => {
-        const maxAttempts = 120; // 10 minutes max (5s interval)
-        let attempts = 0;
 
-        const poll = setInterval(async () => {
-            try {
-                attempts++;
-                const status = await comfyuiApi.getGenerationStatus(comfyuiUrl!, promptId);
-
-                if (status.status === 'completed') {
-                    clearInterval(poll);
-                    setGenerationStatus('completed');
-
-                    // Get output filename (assuming last output is the video)
-                    const outputFilename = status.outputs?.[0]?.filename;
-                    if (outputFilename) {
-                        const videoUrl = comfyuiApi.getOutputUrl(comfyuiUrl!, outputFilename);
-                        setOutputVideo(videoUrl);
-
-                        // Add to video history
-                        addGeneratedVideo({
-                            id: promptId,
-                            filename: outputFilename,
-                            url: videoUrl,
-                            timestamp: Date.now(),
-                            orientation: videoOrientation,
-                            purpose: purpose!
-                        });
-                    }
-                } else if (status.status === 'failed') {
-                    clearInterval(poll);
-                    setGenerationStatus('failed');
-                    setError(status.error || 'Generation failed on server');
-                }
-
-                if (attempts >= maxAttempts) {
-                    clearInterval(poll);
-                    setGenerationStatus('failed');
-                    setError('Generation timed out');
-                }
-            } catch (err: any) {
-                console.error('Polling error:', err);
-            }
-        }, 5000);
-    };
 
     const isReady = Boolean(
         comfyuiUrl &&
         selectedImage &&
         (purpose === 'wan2.2' || (purpose === 'infinitetalk' && selectedAudio))
     );
+
+    // Button text based on pod status
+    const generateButtonText = isPodBusy ? 'Add to Queue' : 'Generate Video';
+    const generateButtonIcon = isPodBusy ? <ListPlus size={20} /> : <Play size={20} fill="currentColor" />;
 
     const getReadyStatus = () => {
         if (!comfyuiUrl) return 'Waiting for Pod connection. Go back to Deploy page if it\'s not ready.';
@@ -515,9 +439,9 @@ export default function GeneratePage() {
                             </div>
                             <input
                                 type="range"
-                                min="1.0"
-                                max="7.0"
-                                step="0.5"
+                                min="0"
+                                max="2.0"
+                                step="0.1"
                                 value={audioCfgScale}
                                 onChange={(e) => useAppStore.getState().setAudioCfgScale(Number(e.target.value))}
                                 style={{
@@ -579,11 +503,21 @@ export default function GeneratePage() {
                                         boxShadow: isReady ? '0 0 20px rgba(99, 102, 241, 0.4)' : 'none'
                                     }}
                                 >
-                                    <Play size={20} fill="currentColor" /> Generate Video
+                                    {generateButtonIcon} {generateButtonText}
                                 </button>
                             </div>
                         </div>
                     </>
+                )}
+
+                {/* Job Queue Panel - Always visible when there are jobs */}
+                {generationStatus === 'idle' && totalJobs > 0 && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <JobQueuePanel
+                            collapsed={queuePanelCollapsed}
+                            onToggle={() => setQueuePanelCollapsed(!queuePanelCollapsed)}
+                        />
+                    </div>
                 )}
 
                 {/* Progress Section */}
