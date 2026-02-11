@@ -65,14 +65,14 @@ export default function PodDetailPage() {
                     removePod(podId);
                     clearInterval(pollInterval);
                     setIsPolling(false);
-                    navigate('/dashboard');
+                    navigate('/pods');
                 }
             } catch (err: any) {
                 console.error('[PodDetailPage] Poll error:', err);
                 if (err.message?.includes('not found') || err.response?.status === 404) {
                     removePod(podId);
                     clearInterval(pollInterval);
-                    navigate('/dashboard');
+                    navigate('/pods');
                 }
             }
         }, 5000);
@@ -86,7 +86,7 @@ export default function PodDetailPage() {
         return (
             <div className="container" style={{ padding: '40px', textAlign: 'center' }}>
                 <h2>Pod not found</h2>
-                <button onClick={() => navigate('/dashboard')} className="btn-secondary" style={{ marginTop: '20px' }}>
+                <button onClick={() => navigate('/pods')} className="btn-secondary" style={{ marginTop: '20px' }}>
                     Back to Dashboard
                 </button>
             </div>
@@ -100,7 +100,7 @@ export default function PodDetailPage() {
         try {
             await runpodApi.terminatePod(apiKey, pod.id);
             removePod(pod.id);
-            navigate('/dashboard');
+            navigate('/pods');
         } catch (err: any) {
             alert('Failed to terminate: ' + err.message);
         }
@@ -109,7 +109,7 @@ export default function PodDetailPage() {
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
             <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/pods')}
                 className="btn-secondary"
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', padding: '8px 16px', borderRadius: '8px' }}
             >

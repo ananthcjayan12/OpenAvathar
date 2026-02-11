@@ -62,9 +62,9 @@ export default function LandingPage() {
                             lastUsedAt: Date.now()
                         });
                     });
-                    navigate('/dashboard');
+                    navigate('/studio');
                 } else {
-                    navigate('/setup');
+                    navigate('/studio');
                 }
             } else {
                 setError('Invalid API Key. Please check and try again.');

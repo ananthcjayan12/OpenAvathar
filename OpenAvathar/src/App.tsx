@@ -7,10 +7,12 @@ import DashboardPage from './pages/DashboardPage';
 import PodDetailPage from './pages/PodDetailPage';
 import DocsPage from './pages/DocsPage';
 import DeployPage from './pages/DeployPage';
+import SettingsPage from './pages/SettingsPage';
+import VideosPage from './pages/VideosPage';
 import MainLayout from './components/layout/MainLayout';
 
 function App() {
-  const { apiKey, activePodId } = useAppStore();
+  const { apiKey } = useAppStore();
 
   return (
     <BrowserRouter>
@@ -31,7 +33,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard"
+          path="/pods"
           element={
             apiKey ? (
               <MainLayout>
@@ -43,7 +45,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/pod/:podId"
+          path="/pods/pod/:podId"
           element={
             apiKey ? (
               <MainLayout>
@@ -67,14 +69,38 @@ function App() {
           }
         />
         <Route
-          path="/generate"
+          path="/studio"
           element={
-            activePodId ? (
+            apiKey ? (
               <MainLayout>
                 <GeneratePage />
               </MainLayout>
             ) : (
-              <Navigate to="/deploy" />
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/videos"
+          element={
+            apiKey ? (
+              <MainLayout>
+                <VideosPage />
+              </MainLayout>
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            apiKey ? (
+              <MainLayout>
+                <SettingsPage />
+              </MainLayout>
+            ) : (
+              <Navigate to="/" />
             )
           }
         />
@@ -90,6 +116,11 @@ function App() {
             )
           }
         />
+
+        {/* Legacy route redirects */}
+        <Route path="/generate" element={<Navigate to="/studio" />} />
+        <Route path="/dashboard" element={<Navigate to="/pods" />} />
+        <Route path="/dashboard/pod/:podId" element={<Navigate to="/pods/pod/:podId" />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" />} />

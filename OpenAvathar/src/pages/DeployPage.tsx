@@ -346,7 +346,7 @@ export default function DeployPage() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="btn btn-primary"
-                                onClick={() => navigate('/generate')}
+                                onClick={() => navigate('/studio')}
                                 style={{ width: '100%', padding: '16px', justifyContent: 'center', fontSize: '1.1rem' }}
                             >
                                 Go to Generator <Rocket size={20} />

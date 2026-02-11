@@ -158,7 +158,7 @@ export default function DashboardPage() {
                                     <button
                                         onClick={() => {
                                             setActivePodId(pod.id);
-                                            navigate('/generate');
+                                            navigate('/studio');
                                         }}
                                         className="btn-primary"
                                         style={{ height: '40px', flexGrow: 1, borderRadius: '10px' }}
@@ -167,7 +167,7 @@ export default function DashboardPage() {
                                     </button>
                                 )}
                                 <button
-                                    onClick={() => navigate(`/dashboard/pod/${pod.id}`)}
+                                    onClick={() => navigate(`/pods/pod/${pod.id}`)}
                                     className="btn-secondary"
                                     style={{ height: '40px', padding: '0 12px', borderRadius: '10px' }}
                                     title="View Logs & Settings"

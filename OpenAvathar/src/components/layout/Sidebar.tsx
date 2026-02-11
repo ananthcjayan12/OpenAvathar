@@ -5,7 +5,9 @@ import {
     Wand2,
     ChevronRight,
     LogOut,
-    X
+    X,
+    Film,
+    BookOpen
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 
@@ -15,17 +17,12 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const { activePodId, clearAuth } = useAppStore();
+    const { clearAuth } = useAppStore();
 
     const navItems = [
-        { path: '/dashboard', label: 'Dashboard', icon: <Rocket size={18} /> },
-        { path: '/setup', label: 'New Pod', icon: <Settings size={18} /> },
-        {
-            path: '/generate',
-            label: 'Generator',
-            icon: <Wand2 size={18} />,
-            disabled: !activePodId
-        },
+        { path: '/studio', label: 'Studio', icon: <Wand2 size={18} /> },
+        { path: '/videos', label: 'Videos', icon: <Film size={18} /> },
+        { path: '/pods', label: 'Pods', icon: <Rocket size={18} /> },
     ];
 
     return (
@@ -77,11 +74,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {navItems.map((item) => (
                         <NavLink
                             key={item.path}
-                            to={item.disabled ? '#' : item.path}
-                            onClick={(e) => {
-                                if (item.disabled) e.preventDefault();
-                                else onClose?.();
-                            }}
+                            to={item.path}
+                            onClick={() => onClose?.()}
                             style={({ isActive }) => ({
                                 display: 'flex',
                                 alignItems: 'center',
@@ -90,20 +84,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 borderRadius: '10px',
                                 textDecoration: 'none',
                                 transition: 'all 0.2s',
-                                background: isActive && !item.disabled ? 'var(--accent)' : 'transparent',
-                                color: isActive && !item.disabled ? 'white' : 'var(--text-secondary)',
-                                fontWeight: isActive && !item.disabled ? 600 : 400,
-                                cursor: item.disabled ? 'not-allowed' : 'pointer',
-                                opacity: item.disabled ? 0.4 : 1,
-                                boxShadow: isActive && !item.disabled ? '0 4px 12px var(--accent-glow)' : 'none',
-                                border: isActive && !item.disabled ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent'
+                                background: isActive ? 'var(--accent)' : 'transparent',
+                                color: isActive ? 'white' : 'var(--text-secondary)',
+                                fontWeight: isActive ? 600 : 400,
+                                cursor: 'pointer',
+                                boxShadow: isActive ? '0 4px 12px var(--accent-glow)' : 'none',
+                                border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent'
                             })}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 {item.icon}
                                 <span>{item.label}</span>
                             </div>
-                            {!item.disabled && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
+                            <ChevronRight size={14} style={{ opacity: 0.5 }} />
                         </NavLink>
                     ))}
                 </nav>
@@ -117,6 +110,27 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     paddingTop: '20px',
                     borderTop: '1px solid var(--border)'
                 }}>
+                    <NavLink
+                        to="/settings"
+                        onClick={() => onClose?.()}
+                        style={({ isActive }) => ({
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px 14px',
+                            color: isActive ? 'white' : 'var(--text-secondary)',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s',
+                            background: isActive ? 'var(--accent)' : 'transparent'
+                        })}
+                        className="hover-bg"
+                    >
+                        <Settings size={18} />
+                        <span>Settings</span>
+                    </NavLink>
+
                     <NavLink
                         to="/docs"
                         onClick={() => onClose?.()}
@@ -134,8 +148,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         })}
                         className="hover-bg"
                     >
-                        <Settings size={18} />
-                        <span>Documentation</span>
+                        <BookOpen size={18} />
+                        <span>Docs</span>
                     </NavLink>
 
                     <button
