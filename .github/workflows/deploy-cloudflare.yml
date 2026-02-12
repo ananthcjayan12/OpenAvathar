@@ -6,6 +6,7 @@ on:
       - main
       - master
       - prod
+      - v1
   workflow_dispatch:  # Allow manual triggers
 
 env:
