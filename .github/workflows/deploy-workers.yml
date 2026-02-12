@@ -41,5 +41,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4'
           workingDirectory: ./${{ env.WORKER_DIR }}
           command: deploy --env production
+        env:
+          LICENSES_KV_ID: ${{ secrets.LICENSES_KV_ID }}

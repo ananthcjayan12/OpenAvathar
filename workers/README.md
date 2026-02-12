@@ -34,17 +34,20 @@ Notes:
 
 ```bash
 cd workers
-wrangler kv:namespace create LICENSES_KV --env production
+# Wrangler v4+ syntax:
+wrangler kv namespace create LICENSES_KV
+# Optional (for local/preview bindings):
+# wrangler kv namespace create LICENSES_KV --preview
 ```
 
-Copy the returned namespace id into `wrangler.toml`:
+Store it as an environment variable for deploy:
 
-```toml
-[env.production]
-kv_namespaces = [
-  { binding = "LICENSES_KV", id = "<PASTE_KV_ID_HERE>" }
-]
-```
+- Local: `export LICENSES_KV_ID=...`
+- GitHub Actions: set `LICENSES_KV_ID` as a repository secret
+
+Notes:
+- Use the **non-preview** namespace id for `LICENSES_KV_ID` (production).
+- The `--preview` id is only for preview/dev if you choose to wire that up later.
 
 ### 2) Set secrets (do not put these in `wrangler.toml`)
 
@@ -69,6 +72,7 @@ Workflow: `.github/workflows/deploy-workers.yml`
 Required GitHub secrets:
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
+- `LICENSES_KV_ID`
 
 Branch trigger:
 - pushes to `prod` deploy the Worker to the `production` env.
