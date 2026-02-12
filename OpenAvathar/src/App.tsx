@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
+import { getFingerprint } from '@/services/fingerprintService';
+import { checkGeneration } from '@/services/licenseService';
 import LandingPage from './pages/LandingPage';
 import SetupPage from './pages/SetupPage';
 import GeneratePage from './pages/GeneratePage';
@@ -12,7 +15,42 @@ import VideosPage from './pages/VideosPage';
 import MainLayout from './components/layout/MainLayout';
 
 function App() {
-  const { apiKey } = useAppStore();
+  const { apiKey, setFingerprint, setUsageStatus, setLicensed, setLicenseKey } = useAppStore();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function initLicensing() {
+      try {
+        const fingerprint = await getFingerprint();
+        if (cancelled) return;
+        setFingerprint(fingerprint);
+
+        const status = await checkGeneration(fingerprint);
+        if (cancelled) return;
+
+        setLicensed(!!status.isPro);
+        setLicenseKey(status.isPro ? status.licenseKey ?? null : null);
+        setUsageStatus({
+          canGenerate: status.canGenerate,
+          dailyLimit: status.limit ?? 1,
+          usedToday: status.used ?? 0,
+          resetsIn: status.resetsIn ?? null,
+        });
+      } catch (err) {
+        // Non-fatal: app can still run without licensing; UI will show generic errors when attempting actions.
+        console.warn('[Licensing] init failed:', err);
+      }
+    }
+
+    // Only init once the user is inside the app flow.
+    if (apiKey) {
+      initLicensing();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey, setFingerprint, setLicensed, setLicenseKey, setUsageStatus]);
 
   return (
     <BrowserRouter>

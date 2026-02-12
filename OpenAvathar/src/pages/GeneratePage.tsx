@@ -19,8 +19,11 @@ import { useJobQueue } from '@/stores/jobQueue';
 import { comfyuiApi } from '@/services/comfyuiApi';
 import { jobProcessor } from '@/services/jobProcessor';
 import { ensurePodAvailable, AutoStartError } from '@/services/podAutoStarter';
+import { getFingerprint } from '@/services/fingerprintService';
+import { checkGeneration, trackGeneration } from '@/services/licenseService';
 import VideoPreview from '@/components/VideoPreview';
 import JobQueuePanel from '@/components/JobQueuePanel';
+import UpgradeModal from '@/components/UpgradeModal';
 
 export default function GeneratePage() {
     const {
@@ -41,7 +44,12 @@ export default function GeneratePage() {
         clearVideoHistory,
         isAutoStarting,
         autoStartMessage,
-        setAutoStartState
+        setAutoStartState,
+        fingerprint: storedFingerprint,
+        canGenerate: storedCanGenerate,
+        resetsIn: storedResetsIn,
+        setUsageStatus,
+        isLicensed
     } = useAppStore();
 
     const activePod = activePodId ? pods[activePodId] : null;
@@ -55,6 +63,7 @@ export default function GeneratePage() {
     const [allVideos, setAllVideos] = useState<Array<{ id: string; filename: string; url: string; timestamp: number; orientation?: 'horizontal' | 'vertical'; purpose?: string }>>([]);
     const [isLoadingVideos, setIsLoadingVideos] = useState(false);
     const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     // Job queue state
     const addJob = useJobQueue((s) => s.addJob);
     const totalJobs = useJobQueue((s) => Object.keys(s.jobs).length);
@@ -148,6 +157,22 @@ export default function GeneratePage() {
         setError(null);
 
         try {
+            // 1) License / daily limit gate
+            const fingerprint = storedFingerprint || (await getFingerprint());
+            const status = await checkGeneration(fingerprint);
+
+            setUsageStatus({
+                canGenerate: status.canGenerate,
+                dailyLimit: status.limit ?? 1,
+                usedToday: status.used ?? 0,
+                resetsIn: status.resetsIn ?? null,
+            });
+
+            if (!status.canGenerate) {
+                setShowUpgradeModal(true);
+                return;
+            }
+
             setAutoStartState(true, 'Checking pod availability...');
 
             const podId = await ensurePodAvailable({
@@ -170,6 +195,17 @@ export default function GeneratePage() {
             jobProcessor.processJob(jobId);
 
             setAutoStartState(false, null);
+
+            // 5) Track generation for free users
+            if (!status.isPro) {
+                const tracked = await trackGeneration(fingerprint);
+                setUsageStatus({
+                    canGenerate: tracked.count < (status.limit ?? 1),
+                    dailyLimit: status.limit ?? 1,
+                    usedToday: tracked.count,
+                    resetsIn: status.resetsIn ?? null,
+                });
+            }
 
             // Reset form for next upload
             setSelectedImage(null);
@@ -204,6 +240,9 @@ export default function GeneratePage() {
         if (!comfyuiUrl && !isAutoStarting) return 'No pod running. We will start one automatically.';
         if (!selectedImage) return 'Please upload an image.';
         if (effectivePurpose === 'infinitetalk' && !selectedAudio) return 'Please upload an audio file for talking head.';
+        if (!isLicensed && !storedCanGenerate) {
+            return `Daily limit reached${storedResetsIn ? ` (resets in ${storedResetsIn})` : ''}.`;
+        }
         return null;
     };
 
@@ -243,6 +282,12 @@ export default function GeneratePage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                resetsIn={storedResetsIn}
+            />
 
             {/* Pod Selector */}
             {generationStatus === 'idle' && (

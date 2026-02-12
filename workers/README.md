@@ -88,6 +88,26 @@ Branch trigger:
 - Body: typically `application/x-www-form-urlencoded`
 - Signature verification: HMAC-SHA256 of the raw request body using `GUMROAD_SECRET`
 
+### Gumroad setup checklist (Phase 4)
+
+1) Create a Gumroad product (e.g. “OpenAvathar Pro (Lifetime)”).
+
+2) Configure the webhook in Gumroad:
+- Webhook URL: `https://<your-worker-domain>/api/gumroad/webhook`
+- Set the webhook signing secret in Gumroad (copy this value).
+
+3) Store that secret in Cloudflare (not GitHub, not wrangler.toml):
+
+```bash
+cd workers
+wrangler secret put GUMROAD_SECRET --env production
+```
+
+4) Test the webhook:
+- Trigger a test purchase (or Gumroad’s test webhook)
+- Verify the Worker logs show an `OK` response
+- Confirm a new license key record appears in KV (`LICENSES_KV`) with `activations: []`
+
 ## Quick smoke checks (after deploy)
 
 - `GET /api/generation/check?fingerprint=test123` should return `{ canGenerate: true, ... }` on a fresh fingerprint.

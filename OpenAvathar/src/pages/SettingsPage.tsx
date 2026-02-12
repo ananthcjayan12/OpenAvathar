@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '@/stores/appStore';
-import { Key, Settings as SettingsIcon } from 'lucide-react';
+import { Key, Settings as SettingsIcon, BadgeCheck, ExternalLink } from 'lucide-react';
+import { getFingerprint } from '@/services/fingerprintService';
+import { activateLicense, checkGeneration } from '@/services/licenseService';
 
 export default function SettingsPage() {
     const {
@@ -15,10 +17,56 @@ export default function SettingsPage() {
         maxFrames,
         setMaxFrames,
         audioCfgScale,
-        setAudioCfgScale
+        setAudioCfgScale,
+        isLicensed,
+        licenseKey,
+        fingerprint: storedFingerprint,
+        setFingerprint,
+        setLicensed,
+        setLicenseKey,
+        setUsageStatus,
+        dailyLimit,
+        usedToday,
+        resetsIn
     } = useAppStore();
 
     const [localApiKey, setLocalApiKey] = useState(apiKey || '');
+    const [localLicenseKey, setLocalLicenseKey] = useState(licenseKey || '');
+    const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
+    const [isActivating, setIsActivating] = useState(false);
+
+    const gumroadUrl = (import.meta.env.VITE_GUMROAD_URL as string | undefined) ?? '';
+
+    const handleActivate = async () => {
+        setLicenseMessage(null);
+        setIsActivating(true);
+        try {
+            const fingerprint = storedFingerprint || (await getFingerprint());
+            setFingerprint(fingerprint);
+
+            const res = await activateLicense(localLicenseKey.trim(), fingerprint);
+            if (!res.success) {
+                setLicenseMessage(res.error || 'Activation failed');
+                return;
+            }
+
+            setLicensed(true);
+            setLicenseKey(localLicenseKey.trim());
+            setLicenseMessage(res.message || 'License activated');
+
+            const status = await checkGeneration(fingerprint);
+            setUsageStatus({
+                canGenerate: status.canGenerate,
+                dailyLimit: status.limit ?? 1,
+                usedToday: status.used ?? 0,
+                resetsIn: status.resetsIn ?? null,
+            });
+        } catch (err: any) {
+            setLicenseMessage(err?.message || 'Activation failed');
+        } finally {
+            setIsActivating(false);
+        }
+    };
 
     return (
         <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
@@ -54,6 +102,53 @@ export default function SettingsPage() {
                 <p style={{ marginTop: '10px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                     Your key is stored locally in the browser.
                 </p>
+            </div>
+
+            <div className="card glass" style={{ padding: '28px', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <BadgeCheck size={18} /> License
+                </h2>
+
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <input
+                        value={localLicenseKey}
+                        onChange={(e) => setLocalLicenseKey(e.target.value)}
+                        placeholder="Enter license key (e.g., OAVR-XXXX-XXXX-XXXX)"
+                        className="glass-panel"
+                        style={{ flexGrow: 1, minWidth: '260px', padding: '12px 12px' }}
+                    />
+                    <button
+                        className="btn-primary"
+                        onClick={handleActivate}
+                        disabled={!localLicenseKey.trim() || isActivating}
+                    >
+                        {isActivating ? 'Activating...' : 'Activate'}
+                    </button>
+                    <a
+                        className="btn-secondary"
+                        href={gumroadUrl || undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ pointerEvents: gumroadUrl ? 'auto' : 'none', opacity: gumroadUrl ? 1 : 0.6 }}
+                        aria-disabled={!gumroadUrl}
+                    >
+                        Upgrade <ExternalLink size={14} />
+                    </a>
+                </div>
+
+                <div style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    Status: <strong style={{ color: isLicensed ? 'var(--accent)' : 'var(--text)' }}>{isLicensed ? 'Pro (Licensed)' : 'Free'}</strong>
+                    {!isLicensed ? (
+                        <span>
+                            {' '}• Today: <strong>{usedToday}/{dailyLimit}</strong>
+                            {resetsIn ? <span> • Resets in <strong>{resetsIn}</strong></span> : null}
+                        </span>
+                    ) : null}
+                </div>
+
+                {licenseMessage ? (
+                    <p style={{ marginTop: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{licenseMessage}</p>
+                ) : null}
             </div>
 
             <div className="card glass" style={{ padding: '28px', marginBottom: '24px' }}>

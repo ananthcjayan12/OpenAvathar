@@ -2,7 +2,7 @@
 ## Complete Architecture & Implementation Guide
 
 **Last Updated:** February 12, 2026  
-**Status:** Phase 1 In Progress (Core UX underway)  
+**Status:** Phase 3 In Progress (Frontend Licensing)  
 **Architecture:** Serverless + One-Time Payment
 
 ---
@@ -318,7 +318,9 @@ compatibility_date = "2024-01-01"
 
 [env.production]
 kv_namespaces = [
-  { binding = "LICENSES_KV", id = "YOUR_KV_ID" }
+  # Wrangler does not expand ${VAR} in this field.
+  # We keep a placeholder here and inject the real ID in CI before deploy.
+  { binding = "LICENSES_KV", id = "${LICENSES_KV_ID}" }
 ]
 
 # NOTE: Do NOT put secrets in this file.
@@ -326,6 +328,10 @@ kv_namespaces = [
 #
 # Set secrets via Wrangler (stored in Cloudflare):
 #   wrangler secret put GUMROAD_SECRET --env production
+
+# CI note:
+# - Store LICENSES_KV_ID as a GitHub Secret
+# - Replace ${LICENSES_KV_ID} in wrangler.toml during the deploy workflow (e.g., via sed)
 ```
 
 ### CI/CD (GitHub Actions) + Secret Hygiene
@@ -1177,33 +1183,33 @@ const handleGenerate = async () => {
 - [x] Improve PodDetail log streaming lifecycle (poll runtime first; connect/disconnect reliably)
 
 ### Phase 2: Cloudflare Workers (Week 2)
-- [ ] Set up Cloudflare account
-- [ ] Create KV namespace
+- [x] Set up Cloudflare account
+- [x] Create KV namespace
 - [x] Initialize Wrangler project
 - [x] Implement all API endpoints
-- [ ] Deploy workers
+- [x] Deploy workers
 - [x] Add GitHub Actions workflow for Workers deploy
 - [ ] Configure Cloudflare secrets via Wrangler (`wrangler secret put ...`) and keep secrets out of `wrangler.toml`
 - [ ] Test with Postman
 
 ### Phase 3: Frontend Licensing (Week 3)
-- [ ] Install FingerprintJS
-- [ ] Create fingerprint service
-- [ ] Create license service
-- [ ] Update appStore
-- [ ] Add limit enforcement
-- [ ] Create UpgradeModal
+- [x] Install FingerprintJS
+- [x] Create fingerprint service
+- [x] Create license service
+- [x] Update appStore
+- [x] Add limit enforcement
+- [x] Create UpgradeModal
 - [ ] Test free tier limits
 
 ### Phase 4: Payment (Week 4)
 - [ ] Set up Gumroad
-- [ ] Implement webhook
+- [x] Implement webhook
 - [ ] Test purchase flow
-- [ ] Add license activation UI
+- [x] Add license activation UI
 - [ ] Test full end-to-end
 
 ### Phase 5: Landing Page (Week 5)
-- [ ] Create PublicLanding
+- [x] Create PublicLanding
 - [ ] Add SEO
 - [ ] Deploy to Cloudflare Pages
 - [ ] A/B test CTAs
