@@ -28,14 +28,14 @@ export default function VideosPage() {
 
             {generatedVideos.length === 0 ? (
                 <div style={{
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--bg-secondary)',
                     border: '1px dashed var(--border)',
                     borderRadius: '24px',
                     padding: '80px 20px',
                     textAlign: 'center'
                 }}>
-                    <Film size={48} style={{ opacity: 0.2, marginBottom: '20px' }} />
-                    <h3 style={{ marginBottom: '10px' }}>No videos yet</h3>
+                    <Film size={48} style={{ opacity: 0.2, marginBottom: '20px', color: 'var(--text-primary)' }} />
+                    <h3 style={{ marginBottom: '10px', color: 'var(--text-primary)' }}>No videos yet</h3>
                     <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
                         Generate your first avatar video in the Studio.
                     </p>
@@ -46,7 +46,7 @@ export default function VideosPage() {
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
                     {generatedVideos.map((video) => (
-                        <div key={video.id} className="card glass" style={{ padding: '16px' }}>
+                        <div key={video.id} className="card" style={{ padding: '16px', background: 'white' }}>
                             <video
                                 src={video.url}
                                 controls

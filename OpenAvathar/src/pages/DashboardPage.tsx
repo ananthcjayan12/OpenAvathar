@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/stores/appStore';
-import { Rocket, Plus, Trash2, Terminal, RefreshCw } from 'lucide-react';
+import { Rocket, Plus, Trash2, Terminal, RefreshCw, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { runpodApi } from '@/services/runpodApi';
@@ -58,98 +58,206 @@ export default function DashboardPage() {
     }, [apiKey, podList.length, updatePod, removePod]);
 
     return (
-        <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 20px' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <div className="container" style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 24px' }}>
+            <header style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                marginBottom: '60px',
+                borderBottom: '1px solid var(--border)',
+                paddingBottom: '32px'
+            }}>
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        Pod <span className="text-gradient">Dashboard</span>
+                    <h1 style={{
+                        fontSize: 'clamp(2rem, 5vw, 2.8rem)',
+                        fontWeight: 800,
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        color: 'var(--text-primary)',
+                        letterSpacing: '-0.02em'
+                    }}>
+                        Studio <span className="text-gradient">Dashboard</span>
                         {isRefreshing && <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--accent)', opacity: 0.6 }} />}
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)' }}>Manage your ComfyUI instances</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Manage and monitor your active AI instances</p>
                 </div>
-                <button
+                <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/setup')}
-                    className="btn-primary"
-                    style={{ borderRadius: '12px', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    className="btn btn-primary"
+                    style={{ borderRadius: '16px', padding: '14px 28px', display: 'flex', alignItems: 'center', gap: '10px' }}
                 >
-                    <Plus size={20} />
+                    <Plus size={20} strokeWidth={2.5} />
                     <span>Deploy New Pod</span>
-                </button>
+                </motion.button>
             </header>
 
-            {podList.length === 0 ? (
-                <div style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px dashed var(--border)',
-                    borderRadius: '24px',
-                    padding: '80px 20px',
-                    textAlign: 'center'
-                }}>
-                    <Rocket size={48} style={{ opacity: 0.2, marginBottom: '20px' }} />
-                    <h3 style={{ marginBottom: '10px' }}>No pods found</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '30px' }}>
-                        Deploy your first GPU pod to start generating videos.
+            {podList.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                        padding: '16px 24px',
+                        background: 'rgba(245, 158, 11, 0.05)',
+                        border: '1px solid rgba(245, 158, 11, 0.2)',
+                        borderRadius: '16px',
+                        marginBottom: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.95rem'
+                    }}
+                >
+                    <div style={{
+                        width: '32px',
+                        height: '32px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        borderRadius: '8px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: 'var(--warning)',
+                        flexShrink: 0
+                    }}>
+                        <AlertTriangle size={18} />
+                    </div>
+                    <p>
+                        <strong>Usage Tip:</strong> GPU instances are billed while running. Remember to <strong>terminate</strong> your pods when you're finished to stop the clock.
                     </p>
-                    <button onClick={() => navigate('/setup')} className="btn-primary">
+                </motion.div>
+            )}
+
+            {podList.length === 0 ? (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.5)',
+                        border: '2px dashed var(--border)',
+                        borderRadius: '32px',
+                        padding: '100px 20px',
+                        textAlign: 'center',
+                        backdropFilter: 'blur(8px)'
+                    }}
+                >
+                    <div style={{
+                        width: '80px',
+                        height: '80px',
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: '24px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        margin: '0 auto 24px',
+                        color: 'var(--text-tertiary)'
+                    }}>
+                        <Rocket size={40} style={{ opacity: 0.5 }} />
+                    </div>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>No active pods</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', maxWidth: '400px', margin: '0 auto 32px' }}>
+                        Your studio is currently offline. Deploy a GPU pod to start generating high-quality avatar videos.
+                    </p>
+                    <button onClick={() => navigate('/setup')} className="btn btn-primary" style={{ padding: '12px 32px' }}>
                         Get Started
                     </button>
-                </div>
+                </motion.div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+                    gap: '32px'
+                }}>
                     {podList.map((pod) => (
                         <motion.div
                             key={pod.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            whileHover={{ y: -5 }}
+                            className="glass"
                             style={{
-                                background: 'rgba(255,255,255,0.05)',
                                 border: pod.id === activePodId ? '2px solid var(--accent)' : '1px solid var(--border)',
-                                borderRadius: '20px',
-                                padding: '24px',
+                                padding: '32px',
+                                borderRadius: '24px',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '16px',
-                                boxShadow: pod.id === activePodId ? '0 0 30px var(--accent-glow)' : 'none'
+                                gap: '20px',
+                                position: 'relative',
+                                background: 'rgba(255, 255, 255, 0.9)',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            {pod.status === 'running' && (
                                 <div style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '8px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
+                                    position: 'absolute',
+                                    top: '32px',
+                                    right: '32px',
+                                    textAlign: 'right'
+                                }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>~$0.44/hr</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Live Billing</div>
+                                </div>
+                            )}
+
+                            {pod.id === activePodId && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-12px',
+                                    right: '24px',
+                                    background: 'var(--accent)',
+                                    color: 'white',
+                                    padding: '4px 12px',
+                                    borderRadius: '99px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 800,
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em'
                                 }}>
+                                    Active Studio
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '10px',
+                                    background: 'var(--bg-tertiary)',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    color: 'var(--text-secondary)'
+                                }}>
                                     {pod.purpose}
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: pod.status === 'running' ? '60px' : 0 }}>
                                     <div style={{
-                                        width: '8px',
-                                        height: '8px',
+                                        width: '10px',
+                                        height: '10px',
                                         borderRadius: '50%',
-                                        background: pod.status === 'running' ? '#10b981' : pod.status === 'failed' ? '#ef4444' : '#f59e0b'
+                                        background: pod.status === 'running' ? '#10b981' : pod.status === 'failed' ? '#ef4444' : '#f59e0b',
+                                        boxShadow: pod.status === 'running' ? '0 0 12px #10b981' : 'none'
                                     }} />
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'capitalize' }}>
                                         {pod.status}
                                     </span>
                                 </div>
                             </div>
 
                             <div>
-                                <h3 style={{ fontSize: '1.25rem', marginBottom: '4px' }}>{pod.name}</h3>
-                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ID: {pod.id}</p>
+                                <h3 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-primary)' }}>{pod.name}</h3>
+                                <code style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>{pod.id}</code>
                             </div>
 
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <span>GPU Type:</span>
-                                    <span style={{ color: 'white' }}>{pod.gpuType}</span>
+                            <div style={{ display: 'grid', gap: '12px', padding: '16px', background: 'rgba(0,0,0,0.02)', borderRadius: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Hardware</span>
+                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{pod.gpuType.replace('NVIDIA GeForce ', '')}</span>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>Created:</span>
-                                    <span style={{ color: 'white' }}>{new Date(pod.createdAt).toLocaleDateString()}</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Created</span>
+                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{new Date(pod.createdAt).toLocaleDateString()}</span>
                                 </div>
                             </div>
 
@@ -160,19 +268,19 @@ export default function DashboardPage() {
                                             setActivePodId(pod.id);
                                             navigate('/studio');
                                         }}
-                                        className="btn-primary"
-                                        style={{ height: '40px', flexGrow: 1, borderRadius: '10px' }}
+                                        className="btn btn-primary"
+                                        style={{ height: '48px', flexGrow: 1, borderRadius: '14px', fontSize: '1rem' }}
                                     >
-                                        Use Pod
+                                        Open Studio
                                     </button>
                                 )}
                                 <button
                                     onClick={() => navigate(`/pods/pod/${pod.id}`)}
-                                    className="btn-secondary"
-                                    style={{ height: '40px', padding: '0 12px', borderRadius: '10px' }}
+                                    className="btn btn-secondary"
+                                    style={{ width: '48px', height: '48px', padding: 0, borderRadius: '14px', color: 'var(--text-secondary)' }}
                                     title="View Logs & Settings"
                                 >
-                                    <Terminal size={18} />
+                                    <Terminal size={20} />
                                 </button>
                                 <button
                                     onClick={async () => {
@@ -187,11 +295,11 @@ export default function DashboardPage() {
                                             }
                                         }
                                     }}
-                                    className="btn-secondary"
-                                    style={{ width: '40px', height: '40px', padding: 0, borderRadius: '10px', color: 'var(--error)' }}
+                                    className="btn btn-secondary"
+                                    style={{ width: '48px', height: '48px', padding: 0, borderRadius: '14px', color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2' }}
                                     title="Terminate pod"
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={20} />
                                 </button>
                             </div>
                         </motion.div>

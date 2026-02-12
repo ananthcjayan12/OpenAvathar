@@ -22,7 +22,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     <Menu size={24} color="var(--text-primary)" />
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'white' }}>OpenAvathar</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)' }}>OpenAvathar</span>
                 </div>
                 <div style={{ width: '24px' }}></div> {/* Spacer for centering */}
             </div>

@@ -53,7 +53,7 @@ Transform OpenAvathar from a developer-centric tool into a consumer-friendly app
 ✅ **Auto-Start Logic:** Deploy pods automatically on first generate  
 ✅ **Progressive Disclosure:** Show complexity only when needed  
 ✅ **Serverless Licensing:** Cloudflare Workers + KV for minimal cost  
-✅ **One-Time Payment:** $29 lifetime via Gumroad (no subscriptions)  
+✅ **One-Time Payment:** $79 lifetime via Gumroad (no subscriptions)  
 ✅ **Device Fingerprinting:** No accounts needed, license keys for portability  
 
 ---
@@ -66,7 +66,7 @@ Transform OpenAvathar from a developer-centric tool into a consumer-friendly app
 ┌─────────────────────────────────────────────────────────┐
 │  Public Landing Page (Marketing + SEO)                  │
 │  - Hero section                                         │
-│  - Pricing ($0 free, $29 pro)                          │
+│  - Pricing ($0 free, $79 pro)                          │
 │  - Blog/SEO content                                     │
 │  - [Try Free] → /studio                                 │
 │  - [Buy Pro] → Gumroad                                  │
@@ -120,7 +120,7 @@ Transform OpenAvathar from a developer-centric tool into a consumer-friendly app
                       ↑
 ┌─────────────────────────────────────────────────────────┐
 │  Gumroad (Payment Processing)                           │
-│  - Product: OpenAvathar Pro ($29 one-time)              │
+│  - Product: OpenAvathar Pro ($79 one-time)              │
 │  - Webhook → Cloudflare Worker on purchase              │
 │  - License key delivery via email                       │
 └─────────────────────────────────────────────────────────┘
@@ -196,7 +196,7 @@ User buys on Gumroad
    │ Free users: 1 video/day              │
    │ Upgrade to Pro: Unlimited forever    │
    │                                      │
-   │ [Wait Until Tomorrow]  [Upgrade $29] │
+   │ [Wait Until Tomorrow]  [Upgrade $79] │
    └──────────────────────────────────────┘
 6. Click [Upgrade] → Redirect to Gumroad
 ```
@@ -206,7 +206,7 @@ User buys on Gumroad
 ```
 1. User clicks "Upgrade to Pro" (Settings or modal)
 2. → Redirect to Gumroad checkout page
-3. User completes payment ($29)
+3. User completes payment ($79)
 4. Gumroad sends webhook to Cloudflare Worker
 5. Worker:
    - Verifies webhook signature
@@ -1224,14 +1224,14 @@ const handleGenerate = async () => {
 
 ## 💰 Cost Analysis
 
-| Service | Cost |
-|---------|------|
-| Cloudflare Workers | Free (100k req/day) |
-| Cloudflare KV | Free (100k reads/day) |
-| Cloudflare Pages | Free |
-| FingerprintJS | Free (20k calls/month) |
-| Gumroad | 8.5% + $0.30 per sale |
-| Domain | ~$10/year |
+| Service            | Cost                   |
+| ------------------ | ---------------------- |
+| Cloudflare Workers | Free (100k req/day)    |
+| Cloudflare KV      | Free (100k reads/day)  |
+| Cloudflare Pages   | Free                   |
+| FingerprintJS      | Free (20k calls/month) |
+| Gumroad            | 8.5% + $0.30 per sale  |
+| Domain             | ~$10/year              |
 
 **Total: ~$1/month**
 

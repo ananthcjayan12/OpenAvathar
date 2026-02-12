@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     Settings,
@@ -30,6 +31,35 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         { path: '/videos', label: 'Videos', icon: <Film size={18} /> },
         { path: '/pods', label: 'Pods', icon: <Rocket size={18} /> },
     ];
+
+    const getMainNavStyle = (isActive: boolean): CSSProperties => ({
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 14px',
+        borderRadius: '10px',
+        textDecoration: 'none',
+        transition: 'all 0.2s',
+        background: isActive ? 'var(--accent)' : 'transparent',
+        color: isActive ? 'white' : 'var(--text-secondary)',
+        fontWeight: isActive ? 600 : 500,
+        cursor: 'pointer',
+        boxShadow: isActive ? '0 4px 12px var(--accent-glow)' : 'none',
+        border: isActive ? '1px solid rgba(79, 70, 229, 0.25)' : '1px solid transparent'
+    });
+
+    const getSubNavStyle = (isActive: boolean): CSSProperties => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 14px',
+        color: isActive ? 'white' : 'var(--text-secondary)',
+        textDecoration: 'none',
+        fontSize: '0.9rem',
+        borderRadius: '8px',
+        transition: 'background 0.2s',
+        background: isActive ? 'var(--accent)' : 'transparent'
+    });
 
     return (
         <>
@@ -70,7 +100,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }}>
                         <Wand2 size={20} color="white" />
                     </div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'white' }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
                         Open<span className="text-gradient">Avathar</span>
                     </h2>
                 </div>
@@ -82,21 +112,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             key={item.path}
                             to={item.path}
                             onClick={() => onClose?.()}
-                            style={({ isActive }) => ({
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '12px 14px',
-                                borderRadius: '10px',
-                                textDecoration: 'none',
-                                transition: 'all 0.2s',
-                                background: isActive ? 'var(--accent)' : 'transparent',
-                                color: isActive ? 'white' : 'var(--text-secondary)',
-                                fontWeight: isActive ? 600 : 400,
-                                cursor: 'pointer',
-                                boxShadow: isActive ? '0 4px 12px var(--accent-glow)' : 'none',
-                                border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent'
-                            })}
+                            style={({ isActive }) => getMainNavStyle(isActive)}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 {item.icon}
@@ -110,9 +126,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                             height: '20px',
                                             padding: '0 6px',
                                             borderRadius: '999px',
-                                            background: 'rgba(99, 102, 241, 0.2)',
-                                            border: '1px solid rgba(99, 102, 241, 0.5)',
-                                            color: 'white',
+                                            background: 'rgba(79, 70, 229, 0.12)',
+                                            border: '1px solid rgba(79, 70, 229, 0.3)',
+                                            color: '#4338ca',
                                             fontSize: '0.7rem',
                                             fontWeight: 700,
                                             display: 'inline-flex',
@@ -142,18 +158,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <NavLink
                         to="/settings"
                         onClick={() => onClose?.()}
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '10px 14px',
-                            color: isActive ? 'white' : 'var(--text-secondary)',
-                            textDecoration: 'none',
-                            fontSize: '0.9rem',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s',
-                            background: isActive ? 'var(--accent)' : 'transparent'
-                        })}
+                        style={({ isActive }) => getSubNavStyle(isActive)}
                         className="hover-bg"
                     >
                         <Settings size={18} />
@@ -163,18 +168,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <NavLink
                         to="/docs"
                         onClick={() => onClose?.()}
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '10px 14px',
-                            color: isActive ? 'white' : 'var(--text-secondary)',
-                            textDecoration: 'none',
-                            fontSize: '0.9rem',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s',
-                            background: isActive ? 'var(--accent)' : 'transparent'
-                        })}
+                        style={({ isActive }) => getSubNavStyle(isActive)}
                         className="hover-bg"
                     >
                         <BookOpen size={18} />
