@@ -18,6 +18,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useJobQueue } from '@/stores/jobQueue';
 import { comfyuiApi } from '@/services/comfyuiApi';
 import { jobProcessor } from '@/services/jobProcessor';
+import { ensurePodAvailable, AutoStartError } from '@/services/podAutoStarter';
 import VideoPreview from '@/components/VideoPreview';
 import JobQueuePanel from '@/components/JobQueuePanel';
 
@@ -37,7 +38,10 @@ export default function GeneratePage() {
         maxFrames,
         audioCfgScale,
         generatedVideos,
-        clearVideoHistory
+        clearVideoHistory,
+        isAutoStarting,
+        autoStartMessage,
+        setAutoStartState
     } = useAppStore();
 
     const activePod = activePodId ? pods[activePodId] : null;
@@ -51,7 +55,6 @@ export default function GeneratePage() {
     const [allVideos, setAllVideos] = useState<Array<{ id: string; filename: string; url: string; timestamp: number; orientation?: 'horizontal' | 'vertical'; purpose?: string }>>([]);
     const [isLoadingVideos, setIsLoadingVideos] = useState(false);
     const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
-
     // Job queue state
     const addJob = useJobQueue((s) => s.addJob);
     const totalJobs = useJobQueue((s) => Object.keys(s.jobs).length);
@@ -137,42 +140,60 @@ export default function GeneratePage() {
     };
 
     const handleGenerate = async () => {
-        if (!comfyuiUrl || !selectedImage || !activePodId) return;
+        if (!selectedImage) return;
 
-        // Check if we should use the job queue system (new method)
-        // For now, use job queue for all new generations
-        const jobId = addJob(
-            {
-                imageFile: selectedImage,
-                audioFile: selectedAudio || undefined,
-                prompt: prompt || 'high quality video',
-                orientation: videoOrientation,
-                maxFrames: maxFrames,
-                workflowType: purpose!,
-                audioCfgScale: audioCfgScale,
-            },
-            activePodId
-        );
+        const workflowType = purpose || 'infinitetalk';
+        if (workflowType === 'infinitetalk' && !selectedAudio) return;
 
-        // Start processing if pod is available
-        if (!isPodBusy) {
-            jobProcessor.processJob(jobId);
-        }
-
-        // Reset form for next upload
-        setSelectedImage(null);
-        setSelectedAudio(null);
-        setImagePreview(null);
-        setPrompt('');
         setError(null);
+
+        try {
+            setAutoStartState(true, 'Checking pod availability...');
+
+            const podId = await ensurePodAvailable({
+                onProgress: (message) => setAutoStartState(true, message),
+            });
+
+            const jobId = addJob(
+                {
+                    imageFile: selectedImage,
+                    audioFile: selectedAudio || undefined,
+                    prompt: prompt || 'high quality video',
+                    orientation: videoOrientation,
+                    maxFrames: maxFrames,
+                    workflowType,
+                    audioCfgScale: audioCfgScale,
+                },
+                podId
+            );
+
+            jobProcessor.processJob(jobId);
+
+            setAutoStartState(false, null);
+
+            // Reset form for next upload
+            setSelectedImage(null);
+            setSelectedAudio(null);
+            setImagePreview(null);
+            setPrompt('');
+        } catch (err: any) {
+            console.error('[Generate] Auto-start failed:', err);
+            setAutoStartState(false, null);
+
+            if (err instanceof AutoStartError) {
+                setError(err.message);
+            } else {
+                setError('Failed to start the studio. Please try again.');
+            }
+        }
     };
 
 
 
+    const effectivePurpose = purpose || 'infinitetalk';
     const isReady = Boolean(
-        comfyuiUrl &&
         selectedImage &&
-        (purpose === 'wan2.2' || (purpose === 'infinitetalk' && selectedAudio))
+        (effectivePurpose === 'wan2.2' || (effectivePurpose === 'infinitetalk' && selectedAudio))
     );
 
     // Button text based on pod status
@@ -180,9 +201,9 @@ export default function GeneratePage() {
     const generateButtonIcon = isPodBusy ? <ListPlus size={20} /> : <Play size={20} fill="currentColor" />;
 
     const getReadyStatus = () => {
-        if (!comfyuiUrl) return 'Waiting for Pod connection. Go back to Deploy page if it\'s not ready.';
+        if (!comfyuiUrl && !isAutoStarting) return 'No pod running. We will start one automatically.';
         if (!selectedImage) return 'Please upload an image.';
-        if (purpose === 'infinitetalk' && !selectedAudio) return 'Please upload an audio file for talking head.';
+        if (effectivePurpose === 'infinitetalk' && !selectedAudio) return 'Please upload an audio file for talking head.';
         return null;
     };
 
@@ -196,6 +217,32 @@ export default function GeneratePage() {
                     {purpose === 'wan2.2' ? 'Transform images into dynamic videos' : 'Create talking head videos with audio'}
                 </p>
             </header>
+
+            <AnimatePresence>
+                {isAutoStarting && autoStartMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="glass-panel"
+                        style={{
+                            margin: '0 auto 24px',
+                            maxWidth: '720px',
+                            padding: '16px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            border: '1px solid var(--border)'
+                        }}
+                    >
+                        <Loader2 className="animate-spin" size={18} />
+                        <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                            {autoStartMessage}
+                        </span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Pod Selector */}
             {generationStatus === 'idle' && (
@@ -434,8 +481,35 @@ export default function GeneratePage() {
 
                             {/* Audio CFG Scale */}
                             <div className="flex-between" style={{ marginBottom: '10px' }}>
-                                <label className="text-secondary" style={{ fontSize: '0.85rem' }}>Audio Guidance Scale</label>
-                                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem' }}>{audioCfgScale.toFixed(1)}</span>
+                                <label className="text-secondary" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    Audio Guidance Scale
+                                    <span 
+                                        title="Lower values (<1.0) may result in 2x slower generation times"
+                                        style={{ 
+                                            cursor: 'help', 
+                                            opacity: 0.6,
+                                            fontSize: '0.75rem',
+                                            border: '1px solid currentColor',
+                                            borderRadius: '50%',
+                                            width: '14px',
+                                            height: '14px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        i
+                                    </span>
+                                </label>
+                                <span style={{ 
+                                    color: audioCfgScale < 1.0 ? 'var(--text-secondary)' : 'var(--accent)', 
+                                    fontWeight: 600, 
+                                    fontSize: '0.9rem' 
+                                }}>
+                                    {audioCfgScale.toFixed(1)}
+                                    {audioCfgScale < 1.0 && <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>⚠️ slower</span>}
+                                </span>
                             </div>
                             <input
                                 type="range"

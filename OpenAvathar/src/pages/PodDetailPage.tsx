@@ -10,6 +10,7 @@ export default function PodDetailPage() {
     const navigate = useNavigate();
     const { pods, apiKey, updatePod, removePod, addLog, logs, clearLogs } = useAppStore();
     const logEndRef = useRef<HTMLDivElement>(null);
+    const logStreamActive = useRef(false);
     const [isPolling, setIsPolling] = useState(false);
 
     const pod = podId ? pods[podId] : null;
@@ -19,33 +20,18 @@ export default function PodDetailPage() {
         logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [logs]);
 
-    // Effect 2: Connect to log stream
+    // Effect 2: Poll for runtime and connect logs only when runtime is available
     useEffect(() => {
-        if (!podId) return;
+        if (!podId || !apiKey) return;
 
-        console.log('[PodDetailPage] Connecting to log stream for:', podId);
-        logStream.connect(podId, (line) => addLog(line));
+        let isActive = true;
+        let pollInterval: number | null = null;
 
-        return () => {
-            console.log('[PodDetailPage] Disconnecting log stream');
-            logStream.disconnect();
-        };
-    }, [podId, addLog]);
-
-    // Effect 3: Poll for status if not running
-    useEffect(() => {
-        if (!podId || !apiKey || !pod) return;
-        if (pod.status === 'running') {
-            setIsPolling(false);
-            return;
-        }
-
-        setIsPolling(true);
-        console.log('[PodDetailPage] Starting status polling for:', podId);
-
-        const pollInterval = setInterval(async () => {
+        const pollStatus = async () => {
             try {
                 const status = await runpodApi.getPodStatus(apiKey, podId);
+                if (!isActive) return;
+
                 console.log('[PodDetailPage] Poll result:', status);
 
                 if (status.desiredStatus === 'RUNNING' && status.runtime) {
@@ -58,29 +44,62 @@ export default function PodDetailPage() {
                         logServerUrl: logUrl
                     });
 
+                    if (!logStreamActive.current) {
+                        console.log('[PodDetailPage] Connecting to log stream for:', podId);
+                        logStream.connect(podId, (line) => addLog(line));
+                        logStreamActive.current = true;
+                    }
+
                     addLog('[SYSTEM] Pod is now running!');
-                    clearInterval(pollInterval);
                     setIsPolling(false);
-                } else if (status.desiredStatus === 'TERMINATED' || status.desiredStatus === 'EXITED') {
+
+                    if (pollInterval) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                    }
+                    return;
+                }
+
+                if (status.desiredStatus === 'TERMINATED' || status.desiredStatus === 'EXITED') {
                     removePod(podId);
-                    clearInterval(pollInterval);
                     setIsPolling(false);
                     navigate('/pods');
+                    if (pollInterval) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                    }
+                    return;
                 }
+
+                setIsPolling(true);
             } catch (err: any) {
                 console.error('[PodDetailPage] Poll error:', err);
                 if (err.message?.includes('not found') || err.response?.status === 404) {
                     removePod(podId);
-                    clearInterval(pollInterval);
                     navigate('/pods');
+                    if (pollInterval) {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                    }
                 }
             }
-        }, 5000);
+        };
+
+        pollStatus();
+        pollInterval = window.setInterval(pollStatus, 5000);
 
         return () => {
-            clearInterval(pollInterval);
+            isActive = false;
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+            if (logStreamActive.current) {
+                console.log('[PodDetailPage] Disconnecting log stream');
+                logStream.disconnect();
+                logStreamActive.current = false;
+            }
         };
-    }, [podId, apiKey, pod?.status, updatePod, addLog, removePod, navigate]);
+    }, [podId, apiKey, updatePod, addLog, removePod, navigate]);
 
     if (!pod) {
         return (

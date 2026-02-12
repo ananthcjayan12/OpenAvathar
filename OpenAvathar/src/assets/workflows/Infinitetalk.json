@@ -13,7 +13,7 @@
       "model": "WanVideo/wan2.1_i2v_480p_14B_fp8_scaled.safetensors",
       "base_precision": "fp16",
       "quantization": "disabled",
-      "load_device": "offload_device",
+      "load_device": "main_device",
       "attention_mode": "sdpa",
       "rms_norm_function": "default",
       "block_swap_args": [
@@ -95,7 +95,7 @@
   },
   "134": {
     "inputs": {
-      "blocks_to_swap": 20,
+      "blocks_to_swap": 5,
       "offload_img_emb": false,
       "offload_txt_emb": false,
       "use_non_blocking": true,

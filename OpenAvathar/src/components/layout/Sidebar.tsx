@@ -10,6 +10,7 @@ import {
     BookOpen
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { useJobQueue } from '@/stores/jobQueue';
 
 interface SidebarProps {
     isOpen?: boolean;
@@ -18,9 +19,14 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { clearAuth } = useAppStore();
+    const pendingJobs = useJobQueue((state) =>
+        Object.values(state.jobs).filter(
+            (job) => job.status === 'queued' || job.status === 'uploading' || job.status === 'generating'
+        ).length
+    );
 
     const navItems = [
-        { path: '/studio', label: 'Studio', icon: <Wand2 size={18} /> },
+        { path: '/studio', label: 'Studio', icon: <Wand2 size={18} />, badge: pendingJobs > 0 ? pendingJobs : null },
         { path: '/videos', label: 'Videos', icon: <Film size={18} /> },
         { path: '/pods', label: 'Pods', icon: <Rocket size={18} /> },
     ];
@@ -96,7 +102,30 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 {item.icon}
                                 <span>{item.label}</span>
                             </div>
-                            <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {item.badge ? (
+                                    <span
+                                        style={{
+                                            minWidth: '20px',
+                                            height: '20px',
+                                            padding: '0 6px',
+                                            borderRadius: '999px',
+                                            background: 'rgba(99, 102, 241, 0.2)',
+                                            border: '1px solid rgba(99, 102, 241, 0.5)',
+                                            color: 'white',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                        aria-label={`${item.badge} jobs queued or running`}
+                                    >
+                                        {item.badge}
+                                    </span>
+                                ) : null}
+                                <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                            </div>
                         </NavLink>
                     ))}
                 </nav>

@@ -38,6 +38,10 @@ interface AppState {
     // Job Queue Integration
     activeJobId: string | null; // Currently focused job in UI (not blocking)
 
+    // Auto-start Status (Not persisted)
+    isAutoStarting: boolean;
+    autoStartMessage: string | null;
+
     // License & Trial State (Persisted)
     isLicensed: boolean;
     licenseKey: string | null;
@@ -79,6 +83,9 @@ interface AppState {
     // Job Queue Actions
     setActiveJobId: (jobId: string | null) => void;
 
+    // Auto-start Actions
+    setAutoStartState: (isAutoStarting: boolean, message: string | null) => void;
+
     // License Actions
     setLicenseKey: (key: string | null) => void;
     setLicensed: (licensed: boolean) => void;
@@ -104,6 +111,8 @@ export const useAppStore = create<AppState>()(
             generationStatus: 'idle',
             outputVideo: null,
             activeJobId: null,
+            isAutoStarting: false,
+            autoStartMessage: null,
             isLicensed: false,
             licenseKey: null,
             freeTrialUsed: false,
@@ -161,6 +170,10 @@ export const useAppStore = create<AppState>()(
             // Job Queue Actions
             setActiveJobId: (activeJobId) => set({ activeJobId }),
 
+            // Auto-start Actions
+            setAutoStartState: (isAutoStarting, autoStartMessage) =>
+                set({ isAutoStarting, autoStartMessage }),
+
             // License Actions
             setLicenseKey: (licenseKey) => set({ licenseKey, isLicensed: !!licenseKey }),
             setLicensed: (isLicensed) => set({ isLicensed }),
@@ -177,6 +190,8 @@ export const useAppStore = create<AppState>()(
                     generationStatus: 'idle',
                     outputVideo: null,
                     logs: [],
+                    isAutoStarting: false,
+                    autoStartMessage: null,
                 });
                 localStorage.removeItem('open-avathar-storage');
             },
@@ -191,6 +206,8 @@ export const useAppStore = create<AppState>()(
                     generationStatus: 'idle',
                     outputVideo: null,
                     logs: [],
+                    isAutoStarting: false,
+                    autoStartMessage: null,
                 }),
         }),
         {
