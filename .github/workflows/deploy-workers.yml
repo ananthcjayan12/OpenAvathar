@@ -16,6 +16,8 @@ jobs:
     name: Build and Deploy Worker
     permissions:
       contents: read
+    env:
+      LICENSES_KV_ID: ${{ secrets.LICENSES_KV_ID }}
 
     steps:
       - name: Checkout
@@ -35,6 +37,13 @@ jobs:
       - name: Typecheck
         working-directory: ./${{ env.WORKER_DIR }}
         run: npm run typecheck
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${LICENSES_KV_ID}" ]; then
+            echo "Missing required secret: LICENSES_KV_ID"
+            exit 1
+          fi
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
