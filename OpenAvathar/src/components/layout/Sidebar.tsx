@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     Settings,
@@ -5,9 +6,12 @@ import {
     Wand2,
     ChevronRight,
     LogOut,
-    X
+    X,
+    Film,
+    BookOpen
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { useJobQueue } from '@/stores/jobQueue';
 
 interface SidebarProps {
     isOpen?: boolean;
@@ -15,18 +19,47 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const { activePodId, clearAuth } = useAppStore();
+    const { clearAuth, apiKey } = useAppStore();
+    const pendingJobs = useJobQueue((state) =>
+        Object.values(state.jobs).filter(
+            (job) => job.status === 'queued' || job.status === 'uploading' || job.status === 'generating'
+        ).length
+    );
 
     const navItems = [
-        { path: '/dashboard', label: 'Dashboard', icon: <Rocket size={18} /> },
-        { path: '/setup', label: 'New Pod', icon: <Settings size={18} /> },
-        {
-            path: '/generate',
-            label: 'Generator',
-            icon: <Wand2 size={18} />,
-            disabled: !activePodId
-        },
+        { path: '/studio', label: 'Studio', icon: <Wand2 size={18} />, badge: pendingJobs > 0 ? pendingJobs : null },
+        { path: '/videos', label: 'Videos', icon: <Film size={18} /> },
+        { path: '/pods', label: 'Pods', icon: <Rocket size={18} /> },
     ];
+
+    const getMainNavStyle = (isActive: boolean): CSSProperties => ({
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 14px',
+        borderRadius: '10px',
+        textDecoration: 'none',
+        transition: 'all 0.2s',
+        background: isActive ? 'var(--accent)' : 'transparent',
+        color: isActive ? 'white' : 'var(--text-secondary)',
+        fontWeight: isActive ? 600 : 500,
+        cursor: 'pointer',
+        boxShadow: isActive ? '0 4px 12px var(--accent-glow)' : 'none',
+        border: isActive ? '1px solid rgba(79, 70, 229, 0.25)' : '1px solid transparent'
+    });
+
+    const getSubNavStyle = (isActive: boolean): CSSProperties => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 14px',
+        color: isActive ? 'white' : 'var(--text-secondary)',
+        textDecoration: 'none',
+        fontSize: '0.9rem',
+        borderRadius: '8px',
+        transition: 'background 0.2s',
+        background: isActive ? 'var(--accent)' : 'transparent'
+    });
 
     return (
         <>
@@ -67,7 +100,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }}>
                         <Wand2 size={20} color="white" />
                     </div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'white' }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
                         Open<span className="text-gradient">Avathar</span>
                     </h2>
                 </div>
@@ -77,33 +110,38 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     {navItems.map((item) => (
                         <NavLink
                             key={item.path}
-                            to={item.disabled ? '#' : item.path}
-                            onClick={(e) => {
-                                if (item.disabled) e.preventDefault();
-                                else onClose?.();
-                            }}
-                            style={({ isActive }) => ({
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '12px 14px',
-                                borderRadius: '10px',
-                                textDecoration: 'none',
-                                transition: 'all 0.2s',
-                                background: isActive && !item.disabled ? 'var(--accent)' : 'transparent',
-                                color: isActive && !item.disabled ? 'white' : 'var(--text-secondary)',
-                                fontWeight: isActive && !item.disabled ? 600 : 400,
-                                cursor: item.disabled ? 'not-allowed' : 'pointer',
-                                opacity: item.disabled ? 0.4 : 1,
-                                boxShadow: isActive && !item.disabled ? '0 4px 12px var(--accent-glow)' : 'none',
-                                border: isActive && !item.disabled ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent'
-                            })}
+                            to={item.path}
+                            onClick={() => onClose?.()}
+                            style={({ isActive }) => getMainNavStyle(isActive)}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 {item.icon}
                                 <span>{item.label}</span>
                             </div>
-                            {!item.disabled && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                {item.badge ? (
+                                    <span
+                                        style={{
+                                            minWidth: '20px',
+                                            height: '20px',
+                                            padding: '0 6px',
+                                            borderRadius: '999px',
+                                            background: 'rgba(79, 70, 229, 0.12)',
+                                            border: '1px solid rgba(79, 70, 229, 0.3)',
+                                            color: '#4338ca',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}
+                                        aria-label={`${item.badge} jobs queued or running`}
+                                    >
+                                        {item.badge}
+                                    </span>
+                                ) : null}
+                                <ChevronRight size={14} style={{ opacity: 0.5 }} />
+                            </div>
                         </NavLink>
                     ))}
                 </nav>
@@ -117,25 +155,40 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     paddingTop: '20px',
                     borderTop: '1px solid var(--border)'
                 }}>
+                    {!apiKey && (
+                        <div
+                            style={{
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(245, 158, 11, 0.25)',
+                                background: 'rgba(245, 158, 11, 0.08)',
+                                color: 'var(--text-secondary)',
+                                fontSize: '0.82rem',
+                                lineHeight: 1.4
+                            }}
+                        >
+                            RunPod API key missing. Add it when you click Generate in Studio.
+                        </div>
+                    )}
+
                     <NavLink
-                        to="/docs"
+                        to="/settings"
                         onClick={() => onClose?.()}
-                        style={({ isActive }) => ({
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '10px 14px',
-                            color: isActive ? 'white' : 'var(--text-secondary)',
-                            textDecoration: 'none',
-                            fontSize: '0.9rem',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s',
-                            background: isActive ? 'var(--accent)' : 'transparent'
-                        })}
+                        style={({ isActive }) => getSubNavStyle(isActive)}
                         className="hover-bg"
                     >
                         <Settings size={18} />
-                        <span>Documentation</span>
+                        <span>Settings</span>
+                    </NavLink>
+
+                    <NavLink
+                        to="/docs"
+                        onClick={() => onClose?.()}
+                        style={({ isActive }) => getSubNavStyle(isActive)}
+                        className="hover-bg"
+                    >
+                        <BookOpen size={18} />
+                        <span>Docs</span>
                     </NavLink>
 
                     <button

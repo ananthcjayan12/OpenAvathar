@@ -1,0 +1,62 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - prod
+      - v1
+  workflow_dispatch:
+
+env:
+  WORKER_DIR: workers
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Worker
+    permissions:
+      contents: read
+    env:
+      LICENSES_KV_ID: ${{ secrets.LICENSES_KV_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./${{ env.WORKER_DIR }}
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: ./${{ env.WORKER_DIR }}
+        run: npm run typecheck
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${LICENSES_KV_ID}" ]; then
+            echo "Missing required secret: LICENSES_KV_ID"
+            exit 1
+          fi
+
+      - name: Inject KV namespace ID into wrangler.toml
+        working-directory: ./${{ env.WORKER_DIR }}
+        run: |
+          sed -i.bak "s/\${LICENSES_KV_ID}/$LICENSES_KV_ID/g" wrangler.toml
+          cat wrangler.toml
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4'
+          workingDirectory: ./${{ env.WORKER_DIR }}
+          command: deploy --env production
+

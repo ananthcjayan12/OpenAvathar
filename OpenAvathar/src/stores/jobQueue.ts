@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { GenerationJob, JobConfig } from '../types/jobs';
 
 /**
@@ -48,10 +49,35 @@ interface JobQueueState {
  */
 const LOG_LIMIT = 100;
 
-export const useJobQueue = create<JobQueueState>((set, get) => ({
-    jobs: {},
+/**
+ * Helper: Reset any running jobs to queued on hydration
+ * (since they can't continue after page refresh)
+ */
+function resetRunningJobs(jobs: Record<string, GenerationJob>): Record<string, GenerationJob> {
+    const resetJobs: Record<string, GenerationJob> = {};
+    
+    Object.entries(jobs).forEach(([id, job]) => {
+        if (job.status === 'uploading' || job.status === 'generating') {
+            resetJobs[id] = {
+                ...job,
+                status: 'queued',
+                progress: 0,
+                logs: [...job.logs, '[System] Job reset to queued after page refresh'],
+            };
+        } else {
+            resetJobs[id] = job;
+        }
+    });
+    
+    return resetJobs;
+}
 
-    addJob: (config: JobConfig, podId: string) => {
+export const useJobQueue = create<JobQueueState>()(
+    persist(
+        (set, get) => ({
+            jobs: {},
+
+            addJob: (config: JobConfig, podId: string) => {
         const jobId = generateJobId();
         const newJob: GenerationJob = {
             id: jobId,
@@ -161,7 +187,36 @@ export const useJobQueue = create<JobQueueState>((set, get) => ({
     clearAllJobs: () => {
         set({ jobs: {} });
     },
-}));
+        }),
+        {
+            name: 'job-queue-storage',
+            storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                // Only persist jobs (exclude File objects from config)
+                jobs: Object.fromEntries(
+                    Object.entries(state.jobs).map(([id, job]) => [
+                        id,
+                        {
+                            ...job,
+                            config: {
+                                ...job.config,
+                                // Remove File objects (can't be serialized)
+                                imageFile: undefined,
+                                audioFile: undefined,
+                            },
+                        },
+                    ])
+                ),
+            }),
+            onRehydrateStorage: () => (state) => {
+                // Reset any running jobs to queued on page load
+                if (state) {
+                    state.jobs = resetRunningJobs(state.jobs);
+                }
+            },
+        }
+    )
+);
 
 /**
  * Selector: Get all jobs sorted by creation time

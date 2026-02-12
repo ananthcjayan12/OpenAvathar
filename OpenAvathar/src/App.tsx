@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAppStore } from '@/stores/appStore';
+import { getFingerprint } from '@/services/fingerprintService';
+import { checkGeneration } from '@/services/licenseService';
 import LandingPage from './pages/LandingPage';
 import SetupPage from './pages/SetupPage';
 import GeneratePage from './pages/GeneratePage';
@@ -7,10 +10,47 @@ import DashboardPage from './pages/DashboardPage';
 import PodDetailPage from './pages/PodDetailPage';
 import DocsPage from './pages/DocsPage';
 import DeployPage from './pages/DeployPage';
+import SettingsPage from './pages/SettingsPage';
+import VideosPage from './pages/VideosPage';
 import MainLayout from './components/layout/MainLayout';
 
 function App() {
-  const { apiKey, activePodId } = useAppStore();
+  const { apiKey, setFingerprint, setUsageStatus, setLicensed, setLicenseKey } = useAppStore();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function initLicensing() {
+      try {
+        const fingerprint = await getFingerprint();
+        if (cancelled) return;
+        setFingerprint(fingerprint);
+
+        const status = await checkGeneration(fingerprint);
+        if (cancelled) return;
+
+        setLicensed(!!status.isPro);
+        setLicenseKey(status.isPro ? status.licenseKey ?? null : null);
+        setUsageStatus({
+          canGenerate: status.canGenerate,
+          dailyLimit: status.limit ?? 1,
+          usedToday: status.used ?? 0,
+          resetsIn: status.resetsIn ?? null,
+        });
+      } catch (err) {
+        // Non-fatal: app can still run without licensing; UI will show generic errors when attempting actions.
+        console.warn('[Licensing] init failed:', err);
+      }
+    }
+
+    // Only init once the user is inside the app flow.
+    if (apiKey) {
+      initLicensing();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey, setFingerprint, setLicensed, setLicenseKey, setUsageStatus]);
 
   return (
     <BrowserRouter>
@@ -31,7 +71,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard"
+          path="/pods"
           element={
             apiKey ? (
               <MainLayout>
@@ -43,7 +83,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/pod/:podId"
+          path="/pods/pod/:podId"
           element={
             apiKey ? (
               <MainLayout>
@@ -67,14 +107,34 @@ function App() {
           }
         />
         <Route
-          path="/generate"
+          path="/studio"
           element={
-            activePodId ? (
+            <MainLayout>
+              <GeneratePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/videos"
+          element={
+            apiKey ? (
               <MainLayout>
-                <GeneratePage />
+                <VideosPage />
               </MainLayout>
             ) : (
-              <Navigate to="/deploy" />
+              <Navigate to="/" />
+            )
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            apiKey ? (
+              <MainLayout>
+                <SettingsPage />
+              </MainLayout>
+            ) : (
+              <Navigate to="/" />
             )
           }
         />
@@ -90,6 +150,11 @@ function App() {
             )
           }
         />
+
+        {/* Legacy route redirects */}
+        <Route path="/generate" element={<Navigate to="/studio" />} />
+        <Route path="/dashboard" element={<Navigate to="/pods" />} />
+        <Route path="/dashboard/pod/:podId" element={<Navigate to="/pods/pod/:podId" />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" />} />

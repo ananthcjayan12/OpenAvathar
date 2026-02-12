@@ -12,18 +12,31 @@ import {
     Film,
     Trash2,
     Rocket,
-    ListPlus
+    ListPlus,
+    Monitor,
+    Smartphone,
+    SlidersHorizontal,
+    MessageSquareText,
+    Clock3,
+    Sparkles,
+    Info
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useJobQueue } from '@/stores/jobQueue';
 import { comfyuiApi } from '@/services/comfyuiApi';
 import { jobProcessor } from '@/services/jobProcessor';
+import { ensurePodAvailable, AutoStartError } from '@/services/podAutoStarter';
+import { getFingerprint } from '@/services/fingerprintService';
+import { checkGeneration, trackGeneration } from '@/services/licenseService';
 import VideoPreview from '@/components/VideoPreview';
 import JobQueuePanel from '@/components/JobQueuePanel';
+import UpgradeModal from '@/components/UpgradeModal';
+import ApiKeyModal from '@/components/ApiKeyModal';
 
 export default function GeneratePage() {
     const {
         activePodId,
+        apiKey,
         pods,
         setActivePodId,
         purpose,
@@ -37,7 +50,15 @@ export default function GeneratePage() {
         maxFrames,
         audioCfgScale,
         generatedVideos,
-        clearVideoHistory
+        clearVideoHistory,
+        isAutoStarting,
+        autoStartMessage,
+        setAutoStartState,
+        fingerprint: storedFingerprint,
+        canGenerate: storedCanGenerate,
+        resetsIn: storedResetsIn,
+        setUsageStatus,
+        isLicensed
     } = useAppStore();
 
     const activePod = activePodId ? pods[activePodId] : null;
@@ -51,7 +72,8 @@ export default function GeneratePage() {
     const [allVideos, setAllVideos] = useState<Array<{ id: string; filename: string; url: string; timestamp: number; orientation?: 'horizontal' | 'vertical'; purpose?: string }>>([]);
     const [isLoadingVideos, setIsLoadingVideos] = useState(false);
     const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
-
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     // Job queue state
     const addJob = useJobQueue((s) => s.addJob);
     const totalJobs = useJobQueue((s) => Object.keys(s.jobs).length);
@@ -137,58 +159,115 @@ export default function GeneratePage() {
     };
 
     const handleGenerate = async () => {
-        if (!comfyuiUrl || !selectedImage || !activePodId) return;
+        if (!selectedImage) return;
 
-        // Check if we should use the job queue system (new method)
-        // For now, use job queue for all new generations
-        const jobId = addJob(
-            {
-                imageFile: selectedImage,
-                audioFile: selectedAudio || undefined,
-                prompt: prompt || 'high quality video',
-                orientation: videoOrientation,
-                maxFrames: maxFrames,
-                workflowType: purpose!,
-                audioCfgScale: audioCfgScale,
-            },
-            activePodId
-        );
+        const workflowType = purpose || 'infinitetalk';
+        if (workflowType === 'infinitetalk' && !selectedAudio) return;
 
-        // Start processing if pod is available
-        if (!isPodBusy) {
-            jobProcessor.processJob(jobId);
+        if (!apiKey) {
+            setShowApiKeyModal(true);
+            return;
         }
 
-        // Reset form for next upload
-        setSelectedImage(null);
-        setSelectedAudio(null);
-        setImagePreview(null);
-        setPrompt('');
         setError(null);
+
+        try {
+            // 1) License / daily limit gate
+            const fingerprint = storedFingerprint || (await getFingerprint());
+            const status = await checkGeneration(fingerprint);
+
+            setUsageStatus({
+                canGenerate: status.canGenerate,
+                dailyLimit: status.limit ?? 1,
+                usedToday: status.used ?? 0,
+                resetsIn: status.resetsIn ?? null,
+            });
+
+            if (!status.canGenerate) {
+                setShowUpgradeModal(true);
+                return;
+            }
+
+            setAutoStartState(true, 'Checking pod availability...');
+
+            const podId = await ensurePodAvailable({
+                onProgress: (message) => setAutoStartState(true, message),
+            });
+
+            const jobId = addJob(
+                {
+                    imageFile: selectedImage,
+                    audioFile: selectedAudio || undefined,
+                    prompt: prompt || 'high quality video',
+                    orientation: videoOrientation,
+                    maxFrames: maxFrames,
+                    workflowType,
+                    audioCfgScale: audioCfgScale,
+                },
+                podId
+            );
+
+            jobProcessor.processJob(jobId);
+
+            setAutoStartState(false, null);
+
+            // 5) Track generation for free users
+            if (!status.isPro) {
+                const tracked = await trackGeneration(fingerprint);
+                setUsageStatus({
+                    canGenerate: tracked.count < (status.limit ?? 1),
+                    dailyLimit: status.limit ?? 1,
+                    usedToday: tracked.count,
+                    resetsIn: status.resetsIn ?? null,
+                });
+            }
+
+            // Reset form for next upload
+            setSelectedImage(null);
+            setSelectedAudio(null);
+            setImagePreview(null);
+            setPrompt('');
+        } catch (err: any) {
+            console.error('[Generate] Auto-start failed:', err);
+            setAutoStartState(false, null);
+
+            if (err instanceof AutoStartError) {
+                setError(err.message);
+            } else {
+                setError('Failed to start the studio. Please try again.');
+            }
+        }
     };
 
 
 
+    const effectivePurpose = purpose || 'infinitetalk';
     const isReady = Boolean(
-        comfyuiUrl &&
         selectedImage &&
-        (purpose === 'wan2.2' || (purpose === 'infinitetalk' && selectedAudio))
+        (effectivePurpose === 'wan2.2' || (effectivePurpose === 'infinitetalk' && selectedAudio))
     );
 
     // Button text based on pod status
     const generateButtonText = isPodBusy ? 'Add to Queue' : 'Generate Video';
     const generateButtonIcon = isPodBusy ? <ListPlus size={20} /> : <Play size={20} fill="currentColor" />;
+    const matchingPodsCount = Object.values(pods).filter(p => !purpose || p.purpose === purpose).length;
 
     const getReadyStatus = () => {
-        if (!comfyuiUrl) return 'Waiting for Pod connection. Go back to Deploy page if it\'s not ready.';
+        if (!comfyuiUrl && !isAutoStarting) return 'No pod running. We will start one automatically.';
         if (!selectedImage) return 'Please upload an image.';
-        if (purpose === 'infinitetalk' && !selectedAudio) return 'Please upload an audio file for talking head.';
+        if (effectivePurpose === 'infinitetalk' && !selectedAudio) return 'Please upload an audio file for talking head.';
+        if (!isLicensed && !storedCanGenerate) {
+            return `Daily limit reached${storedResetsIn ? ` (resets in ${storedResetsIn})` : ''}.`;
+        }
         return null;
     };
 
     return (
-        <div className="container" style={{ padding: '60px 20px', maxWidth: '1400px' }}>
+        <div className="container app-page" style={{ maxWidth: '1400px' }}>
             <header className="flex-center flex-col gap-2" style={{ marginBottom: '40px', textAlign: 'center' }}>
+                <div className="glass-panel" style={{ padding: '8px 14px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '8px' }}>
+                    <Sparkles size={14} /> Studio Workspace
+                </div>
                 <h1 className="text-gradient" style={{ fontSize: '2.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                     <Wand2 /> AI Video Generator
                 </h1>
@@ -197,10 +276,47 @@ export default function GeneratePage() {
                 </p>
             </header>
 
+            <AnimatePresence>
+                {isAutoStarting && autoStartMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="glass-panel"
+                        style={{
+                            margin: '0 auto 24px',
+                            maxWidth: '720px',
+                            padding: '16px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            border: '1px solid var(--border)'
+                        }}
+                    >
+                        <Loader2 className="animate-spin" size={18} />
+                        <span style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                            {autoStartMessage}
+                        </span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                resetsIn={storedResetsIn}
+            />
+
+            <ApiKeyModal
+                isOpen={showApiKeyModal}
+                onClose={() => setShowApiKeyModal(false)}
+            />
+
             {/* Pod Selector */}
             {generationStatus === 'idle' && (
-                <div style={{
-                    background: 'rgba(255,255,255,0.03)',
+                <div className="app-surface" style={{
+                    background: 'rgba(255,255,255,0.78)',
                     border: '1px solid var(--border)',
                     borderRadius: '16px',
                     padding: '16px 20px',
@@ -238,9 +354,9 @@ export default function GeneratePage() {
                             value={activePodId || ''}
                             onChange={(e) => setActivePodId(e.target.value)}
                             style={{
-                                background: 'rgba(255,255,255,0.05)',
+                                background: 'var(--bg-secondary)',
                                 border: '1px solid var(--border)',
-                                color: 'white',
+                                color: 'var(--text-primary)',
                                 padding: '8px 12px',
                                 borderRadius: '8px',
                                 fontSize: '0.9rem',
@@ -258,6 +374,9 @@ export default function GeneratePage() {
                                 ))
                             }
                         </select>
+                        <span className="glass-panel" style={{ padding: '6px 10px', borderRadius: '999px', fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {matchingPodsCount} matching
+                        </span>
                     </div>
                 </div>
             )}
@@ -274,9 +393,12 @@ export default function GeneratePage() {
                     <>
                         {/* Left: Uploads */}
                         <div className="card glass" style={{ padding: '30px' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                                 <ImageIcon size={20} color="var(--accent)" /> Source Image
                             </h3>
+                            <p className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>
+                                Upload a clear portrait image for best motion quality.
+                            </p>
 
                             <input
                                 ref={imageInputRef}
@@ -292,7 +414,7 @@ export default function GeneratePage() {
                                     <button
                                         onClick={() => imageInputRef.current?.click()}
                                         className="btn btn-secondary"
-                                        style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+                                        style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px' }}
                                     >
                                         Change Image
                                     </button>
@@ -315,7 +437,7 @@ export default function GeneratePage() {
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '50%' }}>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '50%' }}>
                                         <Upload size={32} />
                                     </div>
                                     <span style={{ fontSize: '0.9rem' }}>Click or drag to upload image</span>
@@ -324,9 +446,12 @@ export default function GeneratePage() {
 
                             {purpose === 'infinitetalk' && (
                                 <>
-                                    <h3 style={{ fontSize: '1.1rem', marginTop: '32px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginTop: '32px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                                         <Mic size={20} color="var(--accent)" /> Voice Audio
                                     </h3>
+                                    <p className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>
+                                        Add speech audio to drive lip-sync animation.
+                                    </p>
 
                                     <input
                                         ref={audioInputRef}
@@ -375,7 +500,9 @@ export default function GeneratePage() {
 
                         {/* Right: Settings */}
                         <div className="card glass" style={{ padding: '30px', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '24px', fontWeight: 600 }}>Generation Settings</h3>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <SlidersHorizontal size={18} color="var(--accent)" /> Generation Settings
+                            </h3>
 
                             {/* Video Orientation */}
                             <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'block' }}>
@@ -387,26 +514,26 @@ export default function GeneratePage() {
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: videoOrientation === 'horizontal' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        background: videoOrientation === 'horizontal' ? 'var(--accent)' : 'transparent',
                                         color: videoOrientation === 'horizontal' ? 'white' : 'var(--text-secondary)',
                                         border: 'none',
                                         fontSize: '0.9rem'
                                     }}
                                 >
-                                    🖥️ Landscape
+                                    <Monitor size={16} /> Landscape
                                 </button>
                                 <button
                                     onClick={() => useAppStore.getState().setVideoOrientation('vertical')}
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: videoOrientation === 'vertical' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        background: videoOrientation === 'vertical' ? 'var(--accent)' : 'transparent',
                                         color: videoOrientation === 'vertical' ? 'white' : 'var(--text-secondary)',
                                         border: 'none',
                                         fontSize: '0.9rem'
                                     }}
                                 >
-                                    📱 Portrait
+                                    <Smartphone size={16} /> Portrait
                                 </button>
                             </div>
 
@@ -434,8 +561,35 @@ export default function GeneratePage() {
 
                             {/* Audio CFG Scale */}
                             <div className="flex-between" style={{ marginBottom: '10px' }}>
-                                <label className="text-secondary" style={{ fontSize: '0.85rem' }}>Audio Guidance Scale</label>
-                                <span style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem' }}>{audioCfgScale.toFixed(1)}</span>
+                                <label className="text-secondary" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    Audio Guidance Scale
+                                    <span
+                                        title="Lower values (<1.0) may result in 2x slower generation times"
+                                        style={{
+                                            cursor: 'help',
+                                            opacity: 0.6,
+                                            fontSize: '0.75rem',
+                                            border: '1px solid currentColor',
+                                            borderRadius: '50%',
+                                            width: '14px',
+                                            height: '14px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: 'bold'
+                                        }}
+                                    >
+                                        <Info size={10} />
+                                    </span>
+                                </label>
+                                <span style={{
+                                    color: audioCfgScale < 1.0 ? 'var(--text-secondary)' : 'var(--accent)',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem'
+                                }}>
+                                    {audioCfgScale.toFixed(1)}
+                                    {audioCfgScale < 1.0 && <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>⚠️ slower</span>}
+                                </span>
                             </div>
                             <input
                                 type="range"
@@ -453,7 +607,8 @@ export default function GeneratePage() {
                             />
 
                             {/* Prompt */}
-                            <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'block' }}>
+                            <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <MessageSquareText size={14} />
                                 Description Prompt (Optional)
                             </label>
                             <textarea
@@ -487,6 +642,23 @@ export default function GeneratePage() {
                                         border: '1px solid rgba(245, 158, 11, 0.2)'
                                     }}>
                                         <AlertTriangle size={16} /> {getReadyStatus()}
+                                    </div>
+                                )}
+                                <div className="glass-panel" style={{ marginBottom: '14px', padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                    <Clock3 size={14} color="var(--accent)" /> Typical runtime: 2–5 minutes based on load and duration.
+                                </div>
+                                {!apiKey && (
+                                    <div style={{
+                                        fontSize: '0.82rem',
+                                        color: 'var(--warning)',
+                                        textAlign: 'center',
+                                        marginBottom: '12px',
+                                        padding: '10px',
+                                        background: 'rgba(245, 158, 11, 0.1)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(245, 158, 11, 0.2)'
+                                    }}>
+                                        API key required. Clicking Generate will open the key entry modal.
                                     </div>
                                 )}
                                 <button
@@ -539,7 +711,7 @@ export default function GeneratePage() {
 
                             {generationStatus === 'queuing' && (
                                 <motion.div key="queuing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                    <div style={{ display: 'inline-block', padding: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', marginBottom: '24px' }}>
+                                    <div style={{ display: 'inline-block', padding: '20px', borderRadius: '50%', background: 'var(--bg-tertiary)', marginBottom: '24px' }}>
                                         <Loader2 size={48} className="animate-spin" style={{ color: 'var(--accent)' }} />
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Preparing Workflow...</h3>

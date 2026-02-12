@@ -66,8 +66,8 @@ export default function SetupPage() {
     ];
 
     return (
-        <div className="container" style={{ padding: '60px 20px', maxWidth: '1100px' }}>
-            <header className="flex-between flex-col-mobile gap-4" style={{ marginBottom: '48px', alignItems: 'flex-end' }}>
+        <div className="container app-page" style={{ maxWidth: '1100px' }}>
+            <header className="app-page-header flex-col-mobile">
                 <div style={{ width: '100%' }}>
                     <motion.h1
                         className="text-gradient"
@@ -110,7 +110,7 @@ export default function SetupPage() {
                                         cursor: 'pointer',
                                         transition: 'all 0.2s ease',
                                         border: purpose === p.id ? '2px solid var(--accent)' : '1px solid var(--border)',
-                                        background: purpose === p.id ? 'var(--bg-secondary)' : 'rgba(15, 23, 42, 0.4)',
+                                        background: purpose === p.id ? 'var(--bg-secondary)' : 'rgba(255, 255, 255, 0.8)',
                                         position: 'relative',
                                         padding: '24px'
                                     }}
@@ -119,7 +119,7 @@ export default function SetupPage() {
                                         width: '48px',
                                         height: '48px',
                                         borderRadius: '12px',
-                                        background: purpose === p.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                                        background: purpose === p.id ? 'var(--accent)' : 'var(--bg-tertiary)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -163,7 +163,7 @@ export default function SetupPage() {
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: cloudType === 'SECURE' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        background: cloudType === 'SECURE' ? 'var(--accent)' : 'transparent',
                                         color: cloudType === 'SECURE' ? 'white' : 'var(--text-secondary)',
                                         border: 'none',
                                         fontSize: '0.9rem'
@@ -176,7 +176,7 @@ export default function SetupPage() {
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: cloudType === 'COMMUNITY' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        background: cloudType === 'COMMUNITY' ? 'var(--accent)' : 'transparent',
                                         color: cloudType === 'COMMUNITY' ? 'white' : 'var(--text-secondary)',
                                         border: 'none',
                                         fontSize: '0.9rem'
@@ -213,7 +213,7 @@ export default function SetupPage() {
                             </div>
                         </div>
 
-                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--border)' }}>
+                        <div style={{ background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '12px', marginBottom: '24px', border: '1px solid var(--border)' }}>
                             <div className="flex-between" style={{ marginBottom: '4px' }}>
                                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Estimated Cost</span>
                                 <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--success)' }}>$0.69<span style={{ fontSize: '0.8rem', fontWeight: 400 }}>/hr</span></span>

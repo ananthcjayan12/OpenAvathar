@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 for_ref/*
 
+node_modules/
+workers/node_modules/

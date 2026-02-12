@@ -194,8 +194,8 @@ export default function DeployPage() {
     };
 
     return (
-        <div className="container" style={{ padding: '40px 20px', maxWidth: '1400px' }}>
-            <header className="flex-between flex-col-mobile gap-4" style={{ marginBottom: '32px', alignItems: 'flex-end' }}>
+        <div className="container app-page" style={{ maxWidth: '1400px' }}>
+            <header className="app-page-header flex-col-mobile" style={{ alignItems: 'flex-end' }}>
                 <div style={{ width: '100%' }}>
                     <h1 className="text-gradient" style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <Terminal /> GPU Pod Management
@@ -226,18 +226,18 @@ export default function DeployPage() {
 
                 {/* Left Column: Log Viewer */}
                 <div style={{ minWidth: 0 }}>
-                    <div className="card glass" style={{
+                    <div className="card app-log-surface" style={{
                         height: '600px',
                         display: 'flex',
                         flexDirection: 'column',
                         padding: '0',
                         overflow: 'hidden',
-                        background: '#09090b', // Deep black for better contrast
+                        background: 'var(--bg-secondary)',
                         border: '1px solid var(--border)'
                     }}>
                         <div style={{
                             padding: '10px 16px',
-                            background: 'rgba(255,255,255,0.03)',
+                            background: 'var(--bg-tertiary)',
                             borderBottom: '1px solid var(--border)',
                             display: 'flex',
                             alignItems: 'center',
@@ -264,7 +264,7 @@ export default function DeployPage() {
                             fontSize: '0.85rem',
                             lineHeight: '1.6',
                             overflowY: 'auto',
-                            color: '#e2e8f0',
+                            color: 'var(--text-primary)',
                             wordBreak: 'break-word',
                             whiteSpace: 'pre-wrap'
                         }}>
@@ -279,7 +279,7 @@ export default function DeployPage() {
                                         marginBottom: '4px',
                                         borderLeft: log.includes('ERROR') || log.includes('Exception') ? '3px solid var(--error)' : '3px solid transparent',
                                         paddingLeft: '12px',
-                                        color: log.includes('ERROR') ? '#fca5a5' : log.includes('warning') ? '#fcd34d' : 'inherit'
+                                        color: log.includes('ERROR') ? 'var(--error)' : log.includes('warning') ? 'var(--warning)' : 'inherit'
                                     }}>
                                         <span style={{ color: 'var(--text-tertiary)', marginRight: '12px', userSelect: 'none', fontSize: '0.7rem' }}>
                                             {new Date().toLocaleTimeString()}
@@ -346,7 +346,7 @@ export default function DeployPage() {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="btn btn-primary"
-                                onClick={() => navigate('/generate')}
+                                onClick={() => navigate('/studio')}
                                 style={{ width: '100%', padding: '16px', justifyContent: 'center', fontSize: '1.1rem' }}
                             >
                                 Go to Generator <Rocket size={20} />
