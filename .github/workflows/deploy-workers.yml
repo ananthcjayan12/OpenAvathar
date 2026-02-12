@@ -44,5 +44,4 @@ jobs:
           wranglerVersion: '4'
           workingDirectory: ./${{ env.WORKER_DIR }}
           command: deploy --env production
-        env:
-          LICENSES_KV_ID: ${{ secrets.LICENSES_KV_ID }}
+
