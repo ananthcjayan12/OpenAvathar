@@ -45,6 +45,12 @@ jobs:
             exit 1
           fi
 
+      - name: Inject KV namespace ID into wrangler.toml
+        working-directory: ./${{ env.WORKER_DIR }}
+        run: |
+          sed -i.bak "s/\${LICENSES_KV_ID}/$LICENSES_KV_ID/g" wrangler.toml
+          cat wrangler.toml
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:

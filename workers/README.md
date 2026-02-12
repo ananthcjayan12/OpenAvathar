@@ -40,14 +40,19 @@ wrangler kv namespace create LICENSES_KV
 # wrangler kv namespace create LICENSES_KV --preview
 ```
 
-Store it as an environment variable for deploy:
+**For GitHub Actions deploy:**
+Store the namespace ID as a repository secret named `LICENSES_KV_ID` (the workflow will inject it at deploy time).
 
-- Local: `export LICENSES_KV_ID=...`
-- GitHub Actions: set `LICENSES_KV_ID` as a repository secret
+**For local development/deploy:**
+Replace `${LICENSES_KV_ID}` in `wrangler.toml` with your actual KV namespace ID, then run:
+```bash
+npm run deploy
+```
 
 Notes:
-- Use the **non-preview** namespace id for `LICENSES_KV_ID` (production).
-- The `--preview` id is only for preview/dev if you choose to wire that up later.
+- KV namespace IDs are **not secrets** (they're just resource identifiers).
+- The security comes from your API token, not the namespace ID.
+- CI injects the ID at deploy time via `sed` so we don't commit it to the repo.
 
 ### 2) Set secrets (do not put these in `wrangler.toml`)
 
