@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-    const { clearAuth } = useAppStore();
+    const { clearAuth, apiKey } = useAppStore();
     const pendingJobs = useJobQueue((state) =>
         Object.values(state.jobs).filter(
             (job) => job.status === 'queued' || job.status === 'uploading' || job.status === 'generating'
@@ -155,6 +155,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     paddingTop: '20px',
                     borderTop: '1px solid var(--border)'
                 }}>
+                    {!apiKey && (
+                        <div
+                            style={{
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(245, 158, 11, 0.25)',
+                                background: 'rgba(245, 158, 11, 0.08)',
+                                color: 'var(--text-secondary)',
+                                fontSize: '0.82rem',
+                                lineHeight: 1.4
+                            }}
+                        >
+                            RunPod API key missing. Add it when you click Generate in Studio.
+                        </div>
+                    )}
+
                     <NavLink
                         to="/settings"
                         onClick={() => onClose?.()}

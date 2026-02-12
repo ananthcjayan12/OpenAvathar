@@ -12,7 +12,14 @@ import {
     Film,
     Trash2,
     Rocket,
-    ListPlus
+    ListPlus,
+    Monitor,
+    Smartphone,
+    SlidersHorizontal,
+    MessageSquareText,
+    Clock3,
+    Sparkles,
+    Info
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useJobQueue } from '@/stores/jobQueue';
@@ -24,10 +31,12 @@ import { checkGeneration, trackGeneration } from '@/services/licenseService';
 import VideoPreview from '@/components/VideoPreview';
 import JobQueuePanel from '@/components/JobQueuePanel';
 import UpgradeModal from '@/components/UpgradeModal';
+import ApiKeyModal from '@/components/ApiKeyModal';
 
 export default function GeneratePage() {
     const {
         activePodId,
+        apiKey,
         pods,
         setActivePodId,
         purpose,
@@ -64,6 +73,7 @@ export default function GeneratePage() {
     const [isLoadingVideos, setIsLoadingVideos] = useState(false);
     const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     // Job queue state
     const addJob = useJobQueue((s) => s.addJob);
     const totalJobs = useJobQueue((s) => Object.keys(s.jobs).length);
@@ -154,6 +164,11 @@ export default function GeneratePage() {
         const workflowType = purpose || 'infinitetalk';
         if (workflowType === 'infinitetalk' && !selectedAudio) return;
 
+        if (!apiKey) {
+            setShowApiKeyModal(true);
+            return;
+        }
+
         setError(null);
 
         try {
@@ -235,6 +250,7 @@ export default function GeneratePage() {
     // Button text based on pod status
     const generateButtonText = isPodBusy ? 'Add to Queue' : 'Generate Video';
     const generateButtonIcon = isPodBusy ? <ListPlus size={20} /> : <Play size={20} fill="currentColor" />;
+    const matchingPodsCount = Object.values(pods).filter(p => !purpose || p.purpose === purpose).length;
 
     const getReadyStatus = () => {
         if (!comfyuiUrl && !isAutoStarting) return 'No pod running. We will start one automatically.';
@@ -247,8 +263,11 @@ export default function GeneratePage() {
     };
 
     return (
-        <div className="container" style={{ padding: '60px 20px', maxWidth: '1400px' }}>
+        <div className="container app-page" style={{ maxWidth: '1400px' }}>
             <header className="flex-center flex-col gap-2" style={{ marginBottom: '40px', textAlign: 'center' }}>
+                <div className="glass-panel" style={{ padding: '8px 14px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '8px' }}>
+                    <Sparkles size={14} /> Studio Workspace
+                </div>
                 <h1 className="text-gradient" style={{ fontSize: '2.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                     <Wand2 /> AI Video Generator
                 </h1>
@@ -289,10 +308,15 @@ export default function GeneratePage() {
                 resetsIn={storedResetsIn}
             />
 
+            <ApiKeyModal
+                isOpen={showApiKeyModal}
+                onClose={() => setShowApiKeyModal(false)}
+            />
+
             {/* Pod Selector */}
             {generationStatus === 'idle' && (
-                <div style={{
-                    background: 'rgba(255,255,255,0.03)',
+                <div className="app-surface" style={{
+                    background: 'rgba(255,255,255,0.78)',
                     border: '1px solid var(--border)',
                     borderRadius: '16px',
                     padding: '16px 20px',
@@ -330,9 +354,9 @@ export default function GeneratePage() {
                             value={activePodId || ''}
                             onChange={(e) => setActivePodId(e.target.value)}
                             style={{
-                                background: 'rgba(255,255,255,0.05)',
+                                background: 'var(--bg-secondary)',
                                 border: '1px solid var(--border)',
-                                color: 'white',
+                                color: 'var(--text-primary)',
                                 padding: '8px 12px',
                                 borderRadius: '8px',
                                 fontSize: '0.9rem',
@@ -350,6 +374,9 @@ export default function GeneratePage() {
                                 ))
                             }
                         </select>
+                        <span className="glass-panel" style={{ padding: '6px 10px', borderRadius: '999px', fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {matchingPodsCount} matching
+                        </span>
                     </div>
                 </div>
             )}
@@ -366,9 +393,12 @@ export default function GeneratePage() {
                     <>
                         {/* Left: Uploads */}
                         <div className="card glass" style={{ padding: '30px' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                                 <ImageIcon size={20} color="var(--accent)" /> Source Image
                             </h3>
+                            <p className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>
+                                Upload a clear portrait image for best motion quality.
+                            </p>
 
                             <input
                                 ref={imageInputRef}
@@ -384,7 +414,7 @@ export default function GeneratePage() {
                                     <button
                                         onClick={() => imageInputRef.current?.click()}
                                         className="btn btn-secondary"
-                                        style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+                                        style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px' }}
                                     >
                                         Change Image
                                     </button>
@@ -407,7 +437,7 @@ export default function GeneratePage() {
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '50%' }}>
+                                    <div style={{ background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '50%' }}>
                                         <Upload size={32} />
                                     </div>
                                     <span style={{ fontSize: '0.9rem' }}>Click or drag to upload image</span>
@@ -416,9 +446,12 @@ export default function GeneratePage() {
 
                             {purpose === 'infinitetalk' && (
                                 <>
-                                    <h3 style={{ fontSize: '1.1rem', marginTop: '32px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginTop: '32px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                                         <Mic size={20} color="var(--accent)" /> Voice Audio
                                     </h3>
+                                    <p className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '20px' }}>
+                                        Add speech audio to drive lip-sync animation.
+                                    </p>
 
                                     <input
                                         ref={audioInputRef}
@@ -467,7 +500,9 @@ export default function GeneratePage() {
 
                         {/* Right: Settings */}
                         <div className="card glass" style={{ padding: '30px', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: '24px', fontWeight: 600 }}>Generation Settings</h3>
+                            <h3 style={{ fontSize: '1.1rem', marginBottom: '24px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <SlidersHorizontal size={18} color="var(--accent)" /> Generation Settings
+                            </h3>
 
                             {/* Video Orientation */}
                             <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'block' }}>
@@ -479,26 +514,26 @@ export default function GeneratePage() {
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: videoOrientation === 'horizontal' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        background: videoOrientation === 'horizontal' ? 'var(--accent)' : 'transparent',
                                         color: videoOrientation === 'horizontal' ? 'white' : 'var(--text-secondary)',
                                         border: 'none',
                                         fontSize: '0.9rem'
                                     }}
                                 >
-                                    🖥️ Landscape
+                                    <Monitor size={16} /> Landscape
                                 </button>
                                 <button
                                     onClick={() => useAppStore.getState().setVideoOrientation('vertical')}
                                     className="btn"
                                     style={{
                                         flex: 1,
-                                        background: videoOrientation === 'vertical' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                        background: videoOrientation === 'vertical' ? 'var(--accent)' : 'transparent',
                                         color: videoOrientation === 'vertical' ? 'white' : 'var(--text-secondary)',
                                         border: 'none',
                                         fontSize: '0.9rem'
                                     }}
                                 >
-                                    📱 Portrait
+                                    <Smartphone size={16} /> Portrait
                                 </button>
                             </div>
 
@@ -528,10 +563,10 @@ export default function GeneratePage() {
                             <div className="flex-between" style={{ marginBottom: '10px' }}>
                                 <label className="text-secondary" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     Audio Guidance Scale
-                                    <span 
+                                    <span
                                         title="Lower values (<1.0) may result in 2x slower generation times"
-                                        style={{ 
-                                            cursor: 'help', 
+                                        style={{
+                                            cursor: 'help',
                                             opacity: 0.6,
                                             fontSize: '0.75rem',
                                             border: '1px solid currentColor',
@@ -544,13 +579,13 @@ export default function GeneratePage() {
                                             fontWeight: 'bold'
                                         }}
                                     >
-                                        i
+                                        <Info size={10} />
                                     </span>
                                 </label>
-                                <span style={{ 
-                                    color: audioCfgScale < 1.0 ? 'var(--text-secondary)' : 'var(--accent)', 
-                                    fontWeight: 600, 
-                                    fontSize: '0.9rem' 
+                                <span style={{
+                                    color: audioCfgScale < 1.0 ? 'var(--text-secondary)' : 'var(--accent)',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem'
                                 }}>
                                     {audioCfgScale.toFixed(1)}
                                     {audioCfgScale < 1.0 && <span style={{ fontSize: '0.7rem', marginLeft: '4px' }}>⚠️ slower</span>}
@@ -572,7 +607,8 @@ export default function GeneratePage() {
                             />
 
                             {/* Prompt */}
-                            <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'block' }}>
+                            <label className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <MessageSquareText size={14} />
                                 Description Prompt (Optional)
                             </label>
                             <textarea
@@ -606,6 +642,23 @@ export default function GeneratePage() {
                                         border: '1px solid rgba(245, 158, 11, 0.2)'
                                     }}>
                                         <AlertTriangle size={16} /> {getReadyStatus()}
+                                    </div>
+                                )}
+                                <div className="glass-panel" style={{ marginBottom: '14px', padding: '10px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                    <Clock3 size={14} color="var(--accent)" /> Typical runtime: 2–5 minutes based on load and duration.
+                                </div>
+                                {!apiKey && (
+                                    <div style={{
+                                        fontSize: '0.82rem',
+                                        color: 'var(--warning)',
+                                        textAlign: 'center',
+                                        marginBottom: '12px',
+                                        padding: '10px',
+                                        background: 'rgba(245, 158, 11, 0.1)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(245, 158, 11, 0.2)'
+                                    }}>
+                                        API key required. Clicking Generate will open the key entry modal.
                                     </div>
                                 )}
                                 <button
@@ -658,7 +711,7 @@ export default function GeneratePage() {
 
                             {generationStatus === 'queuing' && (
                                 <motion.div key="queuing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                    <div style={{ display: 'inline-block', padding: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', marginBottom: '24px' }}>
+                                    <div style={{ display: 'inline-block', padding: '20px', borderRadius: '50%', background: 'var(--bg-tertiary)', marginBottom: '24px' }}>
                                         <Loader2 size={48} className="animate-spin" style={{ color: 'var(--accent)' }} />
                                     </div>
                                     <h3 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>Preparing Workflow...</h3>

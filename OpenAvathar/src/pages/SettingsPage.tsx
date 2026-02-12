@@ -69,7 +69,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px' }}>
+        <div className="container app-page" style={{ maxWidth: '900px' }}>
             <header style={{ marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '2.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <SettingsIcon size={24} /> Settings
@@ -92,7 +92,7 @@ export default function SettingsPage() {
                         />
                     </div>
                     <button
-                        className="btn-primary"
+                        className="btn btn-primary"
                         onClick={() => setApiKey(localApiKey.trim())}
                         disabled={!localApiKey.trim()}
                     >
@@ -118,14 +118,14 @@ export default function SettingsPage() {
                         style={{ flexGrow: 1, minWidth: '260px', padding: '12px 12px' }}
                     />
                     <button
-                        className="btn-primary"
+                        className="btn btn-primary"
                         onClick={handleActivate}
                         disabled={!localLicenseKey.trim() || isActivating}
                     >
                         {isActivating ? 'Activating...' : 'Activate'}
                     </button>
                     <a
-                        className="btn-secondary"
+                        className="btn btn-secondary"
                         href={gumroadUrl || undefined}
                         target="_blank"
                         rel="noreferrer"

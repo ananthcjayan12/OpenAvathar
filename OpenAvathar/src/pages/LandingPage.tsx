@@ -14,11 +14,8 @@ import {
     Sparkles,
     Video,
     CreditCard,
-    Eye,
-    EyeOff,
     Power
 } from 'lucide-react';
-import { runpodApi } from '@/services/runpodApi';
 import { useAppStore } from '@/stores/appStore';
 
 // --- Components ---
@@ -72,7 +69,7 @@ function Navbar() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <a href="#get-started" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem', textDecoration: 'none' }}>
+                    <a href="/studio" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem', textDecoration: 'none' }}>
                         Start Studio
                     </a>
                 </div>
@@ -140,7 +137,7 @@ function Hero() {
                     </p>
 
                     <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <a href="#get-started" className="btn btn-primary" style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '999px', textDecoration: 'none' }}>
+                        <a href="/studio" className="btn btn-primary" style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '999px', textDecoration: 'none' }}>
                             Start Creating Now <ArrowRight size={20} />
                         </a>
                         <a href="#workflow" className="btn btn-secondary" style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '999px', textDecoration: 'none' }}>
@@ -602,68 +599,11 @@ function Pricing() {
 }
 
 function AccessPortal() {
-    const [keyInput, setKeyInput] = useState('');
-    const [showKey, setShowKey] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
     const navigate = useNavigate();
-    const setApiKey = useAppStore((state) => state.setApiKey);
-    const setValidated = useAppStore((state) => state.setValidated);
+    const apiKey = useAppStore((state) => state.apiKey);
+    const isValidated = useAppStore((state) => state.isValidated);
     const gumroadUrl = import.meta.env.VITE_GUMROAD_URL;
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!keyInput.trim()) return;
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const normalizedKey = keyInput.trim();
-            const isValid = await runpodApi.validateApiKey(normalizedKey);
-
-            if (!isValid) {
-                setError('Invalid API Key. Please check your RunPod account.');
-                return;
-            }
-
-            setApiKey(normalizedKey);
-            setValidated(true);
-
-            // Fetch pods to store in state immediately
-            const pods = await runpodApi.getPods(normalizedKey);
-            const openAvatharPods = pods.filter((pod) =>
-                pod.name.toLowerCase().startsWith('openavathar-') &&
-                pod.desiredStatus !== 'TERMINATED'
-            );
-
-            openAvatharPods.forEach((pod) => {
-                const purpose = pod.name.toLowerCase().includes('wan2.2') ? 'wan2.2' : 'infinitetalk';
-                const status = (pod.desiredStatus === 'TERMINATED' || pod.desiredStatus === 'EXITED') ? 'failed'
-                    : (pod.runtime && pod.desiredStatus === 'RUNNING') ? 'running'
-                        : 'deploying';
-
-                useAppStore.getState().addPod({
-                    id: pod.id,
-                    name: pod.name,
-                    purpose: purpose as 'wan2.2' | 'infinitetalk',
-                    status,
-                    comfyuiUrl: pod.id ? `https://${pod.id}-8188.proxy.runpod.net` : null,
-                    logServerUrl: pod.id ? `https://${pod.id}-8001.proxy.runpod.net` : null,
-                    gpuType: 'NVIDIA GeForce RTX 4090',
-                    createdAt: Date.now(),
-                    lastUsedAt: Date.now()
-                });
-            });
-
-            navigate('/studio');
-        } catch (err) {
-            setError('Connection failed. Please check your internet or try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const hasBrowserSession = Boolean(apiKey && isValidated);
 
     return (
         <section id="get-started" style={{ padding: '80px 0 120px', background: 'var(--bg-primary)' }}>
@@ -690,72 +630,64 @@ function AccessPortal() {
                         }}>
                             <Key size={28} color="var(--accent)" />
                         </div>
-                        <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Launch Your Studio</h2>
-                        <p style={{ color: 'var(--text-secondary)' }}>Connect securely with your RunPod API key.</p>
+                        <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px' }}>Open Studio</h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>
+                            We only check saved browser memory from previous sessions.
+                        </p>
                     </div>
 
-                    <form onSubmit={handleSubmit}>
-                        <div style={{ marginBottom: '24px' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--text-secondary)' }}>RUNPOD API KEY</label>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type={showKey ? 'text' : 'password'}
-                                    value={keyInput}
-                                    onChange={(e) => setKeyInput(e.target.value)}
-                                    placeholder="rk-xxxxxxxxx..."
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 48px 16px 16px',
-                                        borderRadius: '12px',
-                                        border: error ? '2px solid var(--error)' : '2px solid var(--border)',
-                                        fontSize: '1rem',
-                                        outline: 'none',
-                                        color: 'var(--text-primary)'
-                                    }}
-                                />
-                                <button type="button" onClick={() => setShowKey(!showKey)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}>
-                                    {showKey ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                            </div>
-                            {error && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', color: 'var(--error)', fontSize: '0.9rem' }}>
-                                    <AlertTriangle size={16} /> {error}
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="btn btn-primary"
-                            style={{ width: '100%', padding: '16px', fontSize: '1rem' }}
+                    <div style={{ marginBottom: '20px' }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                fontSize: '0.92rem',
+                                borderRadius: '12px',
+                                padding: '12px 14px',
+                                background: hasBrowserSession ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                                border: hasBrowserSession ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(245, 158, 11, 0.25)',
+                                color: hasBrowserSession ? 'var(--text-primary)' : 'var(--text-secondary)'
+                            }}
                         >
-                            {isLoading ? 'Verifying Key...' : 'Enter Studio'}
-                        </button>
-
-                        <div style={{ marginTop: '24px', textAlign: 'center' }}>
-                            <a href="https://www.runpod.io/console/user/settings" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <ExternalLink size={14} /> Get your key from RunPod
-                            </a>
-                            <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
-                                Keys are stored locally in your browser.
-                            </div>
+                            {hasBrowserSession ? <Check size={16} color="#10b981" /> : <AlertTriangle size={16} color="#f59e0b" />}
+                            {hasBrowserSession
+                                ? 'Saved API key found in this browser.'
+                                : 'No saved API key found. You can still open Studio and add it when generating.'}
                         </div>
+                    </div>
 
-                        {gumroadUrl && (
-                            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Already purchased Pro?</p>
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/studio')}
-                                    className="btn btn-secondary"
-                                    style={{ width: '100%', fontSize: '0.9rem' }}
-                                >
-                                    Activate License
-                                </button>
-                            </div>
-                        )}
-                    </form>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/studio')}
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '16px', fontSize: '1rem' }}
+                    >
+                        {hasBrowserSession ? 'Enter Studio' : 'Continue to Studio'}
+                    </button>
+
+                    <div style={{ marginTop: '24px', textAlign: 'center' }}>
+                        <a href="https://www.runpod.io/console/user/settings" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <ExternalLink size={14} /> Get your key from RunPod
+                        </a>
+                        <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                            Keys are stored locally in your browser.
+                        </div>
+                    </div>
+
+                    {gumroadUrl && (
+                        <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Already purchased Pro?</p>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/studio')}
+                                className="btn btn-secondary"
+                                style={{ width: '100%', fontSize: '0.9rem' }}
+                            >
+                                Activate License
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </section>

@@ -7,7 +7,7 @@ export default function VideosPage() {
     const { generatedVideos, clearVideoHistory } = useAppStore();
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 20px' }}>
+        <div className="container app-page" style={{ maxWidth: '1100px' }}>
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                 <div>
                     <h1 style={{ fontSize: '2.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -18,7 +18,7 @@ export default function VideosPage() {
                 {generatedVideos.length > 0 && (
                     <button
                         onClick={() => clearVideoHistory()}
-                        className="btn-secondary"
+                        className="btn btn-secondary"
                         style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                         <Trash2 size={16} /> Clear History
@@ -27,7 +27,7 @@ export default function VideosPage() {
             </header>
 
             {generatedVideos.length === 0 ? (
-                <div style={{
+                <div className="app-surface" style={{
                     background: 'var(--bg-secondary)',
                     border: '1px dashed var(--border)',
                     borderRadius: '24px',
@@ -39,14 +39,14 @@ export default function VideosPage() {
                     <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
                         Generate your first avatar video in the Studio.
                     </p>
-                    <button onClick={() => navigate('/studio')} className="btn-primary">
+                    <button onClick={() => navigate('/studio')} className="btn btn-primary">
                         Go to Studio
                     </button>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
                     {generatedVideos.map((video) => (
-                        <div key={video.id} className="card" style={{ padding: '16px', background: 'white' }}>
+                        <div key={video.id} className="card glass" style={{ padding: '16px', background: 'white' }}>
                             <video
                                 src={video.url}
                                 controls

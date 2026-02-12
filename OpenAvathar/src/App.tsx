@@ -109,13 +109,9 @@ function App() {
         <Route
           path="/studio"
           element={
-            apiKey ? (
-              <MainLayout>
-                <GeneratePage />
-              </MainLayout>
-            ) : (
-              <Navigate to="/" />
-            )
+            <MainLayout>
+              <GeneratePage />
+            </MainLayout>
           }
         />
         <Route

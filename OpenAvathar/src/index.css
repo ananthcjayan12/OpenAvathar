@@ -175,6 +175,40 @@ body {
   width: 100%;
 }
 
+.app-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+.app-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 36px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-surface {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.app-muted {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(241, 245, 249, 0.9) 100%);
+  border: 1px solid var(--border);
+}
+
+.app-log-surface {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
 /* Form Elements */
 input,
 textarea,
@@ -388,6 +422,15 @@ select:focus {
 @media (max-width: 768px) {
   .container {
     padding: 0 16px;
+  }
+
+  .app-page {
+    padding: 28px 16px 40px;
+  }
+
+  .app-page-header {
+    margin-bottom: 24px;
+    padding-bottom: 14px;
   }
 
   .hide-mobile {

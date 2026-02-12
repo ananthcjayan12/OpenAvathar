@@ -58,7 +58,7 @@ export default function DashboardPage() {
     }, [apiKey, podList.length, updatePod, removePod]);
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 24px' }}>
+        <div className="container app-page" style={{ maxWidth: '1100px' }}>
             <header style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -135,7 +135,7 @@ export default function DashboardPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     style={{
-                        background: 'rgba(255, 255, 255, 0.5)',
+                        background: 'rgba(255, 255, 255, 0.78)',
                         border: '2px dashed var(--border)',
                         borderRadius: '32px',
                         padding: '100px 20px',
