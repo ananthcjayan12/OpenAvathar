@@ -1,0 +1,12 @@
+name = "openavathar-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# KV namespace IDs are not secrets. Use `wrangler kv:namespace create` to create and then paste IDs here.
+# App secrets (e.g., Gumroad webhook secret) MUST be set via:
+#   wrangler secret put GUMROAD_SECRET --env production
+
+[env.production]
+kv_namespaces = [
+  { binding = "LICENSES_KV", id = "REPLACE_WITH_KV_ID" }
+]

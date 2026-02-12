@@ -1,8 +1,8 @@
 # OpenAvathar Implementation Plan
 ## Complete Architecture & Implementation Guide
 
-**Last Updated:** February 11, 2026  
-**Status:** Ready for Implementation  
+**Last Updated:** February 12, 2026  
+**Status:** Phase 1 In Progress (Core UX underway)  
 **Architecture:** Serverless + One-Time Payment
 
 ---
@@ -321,8 +321,62 @@ kv_namespaces = [
   { binding = "LICENSES_KV", id = "YOUR_KV_ID" }
 ]
 
-[env.production.vars]
-GUMROAD_SECRET = "your-gumroad-webhook-secret"
+# NOTE: Do NOT put secrets in this file.
+# KV namespace IDs are not secrets, but webhook secrets/API keys must never be committed.
+#
+# Set secrets via Wrangler (stored in Cloudflare):
+#   wrangler secret put GUMROAD_SECRET --env production
+```
+
+### CI/CD (GitHub Actions) + Secret Hygiene
+
+#### Devil’s Critique (why this can go wrong)
+- **Risk: accidental secret leaks** if we embed secrets in `wrangler.toml` or commit `.dev.vars`.
+- **Risk: “CI owns prod secrets”** if we push secret rotation into every deploy step; a compromised GitHub token would be higher blast radius.
+- **Risk: drift between environments** if we deploy from different branches without a clear mapping (dev/staging/prod).
+
+#### Recommendation
+- Use GitHub Actions to deploy Workers (same approach as Pages) for repeatable releases.
+- Keep **all real secrets in Cloudflare** via `wrangler secret put ...` (one-time setup per environment).
+- In GitHub Actions, only store the minimum needed to deploy:
+  - `CLOUDFLARE_API_TOKEN` (scoped to Workers/KV/Pages as needed)
+  - `CLOUDFLARE_ACCOUNT_ID`
+- Keep `wrangler.toml` free of secret values; bind names only.
+
+#### Final Decision
+✅ **Proceed with GitHub Actions for Workers deploy**, but **do not** inject app secrets from GitHub on every run by default.
+We’ll set `GUMROAD_SECRET` once via Wrangler/Cloudflare, and CI will only perform build + deploy.
+
+#### Example Workflow (Workers)
+```yml
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: workers/package-lock.json
+      - name: Install
+        working-directory: workers
+        run: npm ci
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers
+          command: deploy --env production
 ```
 
 ### API Endpoints
@@ -1100,22 +1154,36 @@ const handleGenerate = async () => {
 
 ## 🚀 Implementation Phases
 
+### ✅ Progress Update (as of Feb 12, 2026)
+- Auto-start pod orchestration is implemented (including ComfyUI warm-up probing) and wired into Studio generation.
+- Studio now shows a friendly “auto-start / warm-up” status banner while infrastructure spins up.
+- Job queue UX improved: pending job count badge in Sidebar, and job queue persistence with safe reset-on-refresh behavior.
+- Pod detail log streaming is safer (connect logs only after runtime is available; clean disconnect on unmount).
+- InfiniteTalk workflow tuned for better runtime behavior (device load target + reduced block swapping).
+
 ### Phase 1: Core UX (Week 1)
-- [ ] Update Sidebar navigation
+- [x] Update Sidebar navigation
 - [ ] Create VideosPage
 - [ ] Create PodsPage
 - [ ] Create SettingsPage
-- [ ] Implement podAutoStarter service
-- [ ] Update GeneratePage with auto-start
-- [ ] Add progressive disclosure (pod selector)
+- [x] Implement podAutoStarter service
+- [x] Update GeneratePage with auto-start
+- [x] Add progressive disclosure (pod selector)
 - [ ] Test auto-start flow
+
+#### Phase 1 (Additional Completed Work)
+- [x] Persist job queue across refresh (reset any in-progress jobs back to queued on hydration)
+- [x] Sidebar shows active queued/running job count badge for quick visibility
+- [x] Improve PodDetail log streaming lifecycle (poll runtime first; connect/disconnect reliably)
 
 ### Phase 2: Cloudflare Workers (Week 2)
 - [ ] Set up Cloudflare account
 - [ ] Create KV namespace
-- [ ] Initialize Wrangler project
-- [ ] Implement all API endpoints
+- [x] Initialize Wrangler project
+- [x] Implement all API endpoints
 - [ ] Deploy workers
+- [x] Add GitHub Actions workflow for Workers deploy
+- [ ] Configure Cloudflare secrets via Wrangler (`wrangler secret put ...`) and keep secrets out of `wrangler.toml`
 - [ ] Test with Postman
 
 ### Phase 3: Frontend Licensing (Week 3)
