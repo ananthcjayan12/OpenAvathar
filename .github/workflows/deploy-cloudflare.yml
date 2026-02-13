@@ -19,6 +19,9 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    env:
+      VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
+      VITE_GUMROAD_URL: ${{ secrets.VITE_GUMROAD_URL }}
     
     steps:
       - name: Checkout
@@ -34,6 +37,13 @@ jobs:
       - name: Install Dependencies
         working-directory: ./OpenAvathar
         run: npm ci
+
+      - name: Validate required frontend env
+        run: |
+          if [ -z "${VITE_WORKER_URL}" ]; then
+            echo "Missing required secret: VITE_WORKER_URL"
+            exit 1
+          fi
 
       - name: Build Frontend
         working-directory: ./OpenAvathar

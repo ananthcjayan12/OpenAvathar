@@ -1,4 +1,7 @@
-const WORKER_URL = (import.meta.env.VITE_WORKER_URL as string | undefined)?.replace(/\/$/, '');
+function readWorkerUrl(): string {
+  const fromVite = (import.meta.env.VITE_WORKER_URL as string | undefined)?.trim();
+  return (fromVite || '').replace(/\/$/, '');
+}
 
 export interface LicenseStatus {
   isPro: boolean;
@@ -32,10 +35,13 @@ async function parseJsonOrThrow<T>(response: Response, context: string): Promise
 }
 
 function requireWorkerUrl(): string {
-  if (!WORKER_URL) {
-    throw new Error('VITE_WORKER_URL is not configured');
+  const workerUrl = readWorkerUrl();
+  if (!workerUrl) {
+    throw new Error(
+      'VITE_WORKER_URL is not configured. For Cloudflare Pages, set it as a Production build variable and redeploy the site.'
+    );
   }
-  return WORKER_URL;
+  return workerUrl;
 }
 
 export async function checkGeneration(fingerprint: string): Promise<LicenseStatus> {
