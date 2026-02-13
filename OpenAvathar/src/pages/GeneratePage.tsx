@@ -28,6 +28,7 @@ import { jobProcessor } from '@/services/jobProcessor';
 import { ensurePodAvailable, AutoStartError } from '@/services/podAutoStarter';
 import { getFingerprint } from '@/services/fingerprintService';
 import { checkGeneration, trackGeneration } from '@/services/licenseService';
+import { runpodApi } from '@/services/runpodApi';
 import VideoPreview from '@/components/VideoPreview';
 import JobQueuePanel from '@/components/JobQueuePanel';
 import UpgradeModal from '@/components/UpgradeModal';
@@ -58,7 +59,8 @@ export default function GeneratePage() {
         canGenerate: storedCanGenerate,
         resetsIn: storedResetsIn,
         setUsageStatus,
-        isLicensed
+        isLicensed,
+        removePod
     } = useAppStore();
 
     const activePod = activePodId ? pods[activePodId] : null;
@@ -82,11 +84,32 @@ export default function GeneratePage() {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
 
+    useEffect(() => {
+        if (!apiKey || !activePodId) return;
+
+        const syncActivePod = async () => {
+            try {
+                const status = await runpodApi.getPodStatus(apiKey, activePodId);
+                if (status.desiredStatus === 'TERMINATED' || status.desiredStatus === 'EXITED') {
+                    removePod(activePodId);
+                }
+            } catch (err: any) {
+                if (err.message?.includes('not found') || err.response?.status === 404) {
+                    removePod(activePodId);
+                }
+            }
+        };
+
+        syncActivePod();
+    }, [apiKey, activePodId, removePod]);
+
     // Fetch videos from ComfyUI on mount
     useEffect(() => {
         const fetchVideos = async () => {
             if (!comfyuiUrl) {
                 console.log('[VideoHistory] No ComfyUI URL available, skipping fetch');
+                setAllVideos([]);
+                setIsLoadingVideos(false);
                 return;
             }
 
@@ -144,7 +167,7 @@ export default function GeneratePage() {
             setSelectedAudio(file);
 
             // Calculate duration if purpose is infinitetalk
-            if (purpose === 'infinitetalk') {
+            if ((purpose || 'infinitetalk') === 'infinitetalk') {
                 const audio = new Audio();
                 audio.src = URL.createObjectURL(file);
                 audio.onloadedmetadata = () => {
@@ -444,7 +467,7 @@ export default function GeneratePage() {
                                 </div>
                             )}
 
-                            {purpose === 'infinitetalk' && (
+                            {effectivePurpose === 'infinitetalk' && (
                                 <>
                                     <h3 style={{ fontSize: '1.1rem', marginTop: '32px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                                         <Mic size={20} color="var(--accent)" /> Voice Audio
@@ -797,6 +820,7 @@ export default function GeneratePage() {
             </div>
 
             {/* Gallery Section */}
+            {comfyuiUrl && (
             <div style={{ marginTop: '80px' }}>
                 <div className="flex-between" style={{ marginBottom: '30px' }}>
                     <h2 style={{ fontSize: '2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -890,6 +914,7 @@ export default function GeneratePage() {
                     </div>
                 )}
             </div>
+            )}
         </div >
     );
 }

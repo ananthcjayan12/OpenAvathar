@@ -162,9 +162,11 @@ export const useAppStore = create<AppState>()(
             removePod: (podId) =>
                 set((state) => {
                     const { [podId]: removed, ...remainingPods } = state.pods;
+                    const hasRemainingPods = Object.keys(remainingPods).length > 0;
                     return {
                         pods: remainingPods,
                         activePodId: state.activePodId === podId ? null : state.activePodId,
+                        generatedVideos: hasRemainingPods ? state.generatedVideos : [],
                     };
                 }),
             setActivePodId: (activePodId) => set({ activePodId }),
