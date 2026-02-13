@@ -14,38 +14,55 @@ export default function DashboardPage() {
 
     // Effect: Poll all pods status every 30 seconds
     useEffect(() => {
-        if (!apiKey || podList.length === 0) return;
+        if (!apiKey) return;
 
         const refreshAllPods = async () => {
             setIsRefreshing(true);
             console.log('[DashboardPage] Refreshing all pods status...');
 
-            for (const pod of podList) {
-                try {
-                    const status = await runpodApi.getPodStatus(apiKey, pod.id);
+            try {
+                const remotePods = await runpodApi.getPods(apiKey);
+                const remotePodIds = new Set(remotePods.map((pod) => pod.id));
+                const currentPods = Object.values(useAppStore.getState().pods);
 
-                    if (status.desiredStatus === 'RUNNING' && status.runtime) {
-                        if (pod.status !== 'running') {
-                            updatePod(pod.id, {
-                                status: 'running',
-                                comfyuiUrl: `https://${pod.id}-8188.proxy.runpod.net`,
-                                logServerUrl: `https://${pod.id}-8001.proxy.runpod.net`
-                            });
-                        }
-                    } else if (status.desiredStatus === 'TERMINATED') {
+                for (const pod of currentPods) {
+                    if (!remotePodIds.has(pod.id)) {
                         removePod(pod.id);
-                    } else if (!status.runtime && pod.status !== 'deploying') {
-                        updatePod(pod.id, { status: 'deploying' });
-                    }
-                } catch (err: any) {
-                    if (err.message?.includes('not found') || err.response?.status === 404) {
-                        removePod(pod.id);
-                    } else {
-                        console.error(`[DashboardPage] Error polling ${pod.id}:`, err);
                     }
                 }
+
+                for (const pod of currentPods) {
+                    if (!remotePodIds.has(pod.id)) {
+                        continue;
+                    }
+
+                    try {
+                        const status = await runpodApi.getPodStatus(apiKey, pod.id);
+
+                        if (status.desiredStatus === 'RUNNING' && status.runtime) {
+                            if (pod.status !== 'running') {
+                                updatePod(pod.id, {
+                                    status: 'running',
+                                    comfyuiUrl: `https://${pod.id}-8188.proxy.runpod.net`,
+                                    logServerUrl: `https://${pod.id}-8001.proxy.runpod.net`
+                                });
+                            }
+                        } else if (status.desiredStatus === 'TERMINATED' || status.desiredStatus === 'EXITED') {
+                            removePod(pod.id);
+                        } else if (!status.runtime && pod.status !== 'deploying') {
+                            updatePod(pod.id, { status: 'deploying' });
+                        }
+                    } catch (err: any) {
+                        if (err.message?.includes('not found') || err.response?.status === 404) {
+                            removePod(pod.id);
+                        } else {
+                            console.error(`[DashboardPage] Error polling ${pod.id}:`, err);
+                        }
+                    }
+                }
+            } finally {
+                setIsRefreshing(false);
             }
-            setIsRefreshing(false);
         };
 
         // Initial refresh on mount
@@ -55,7 +72,7 @@ export default function DashboardPage() {
         const interval = setInterval(refreshAllPods, 30000);
 
         return () => clearInterval(interval);
-    }, [apiKey, podList.length, updatePod, removePod]);
+    }, [apiKey, updatePod, removePod]);
 
     return (
         <div className="container app-page" style={{ maxWidth: '1100px' }}>

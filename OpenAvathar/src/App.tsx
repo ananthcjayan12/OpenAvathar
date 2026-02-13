@@ -129,13 +129,9 @@ function App() {
         <Route
           path="/settings"
           element={
-            apiKey ? (
-              <MainLayout>
-                <SettingsPage />
-              </MainLayout>
-            ) : (
-              <Navigate to="/" />
-            )
+            <MainLayout>
+              <SettingsPage />
+            </MainLayout>
           }
         />
         <Route

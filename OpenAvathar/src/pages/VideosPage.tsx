@@ -4,7 +4,8 @@ import { Film, Trash2 } from 'lucide-react';
 
 export default function VideosPage() {
     const navigate = useNavigate();
-    const { generatedVideos, clearVideoHistory } = useAppStore();
+    const { generatedVideos, clearVideoHistory, pods } = useAppStore();
+    const hasPods = Object.keys(pods).length > 0;
 
     return (
         <div className="container app-page" style={{ maxWidth: '1100px' }}>
@@ -15,7 +16,7 @@ export default function VideosPage() {
                     </h1>
                     <p style={{ color: 'var(--text-secondary)' }}>Your generated outputs in one place.</p>
                 </div>
-                {generatedVideos.length > 0 && (
+                {hasPods && generatedVideos.length > 0 && (
                     <button
                         onClick={() => clearVideoHistory()}
                         className="btn btn-secondary"
@@ -26,7 +27,24 @@ export default function VideosPage() {
                 )}
             </header>
 
-            {generatedVideos.length === 0 ? (
+            {!hasPods ? (
+                <div className="app-surface" style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px dashed var(--border)',
+                    borderRadius: '24px',
+                    padding: '80px 20px',
+                    textAlign: 'center'
+                }}>
+                    <Film size={48} style={{ opacity: 0.2, marginBottom: '20px', color: 'var(--text-primary)' }} />
+                    <h3 style={{ marginBottom: '10px', color: 'var(--text-primary)' }}>No active pod</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                        Start a pod to access generation outputs.
+                    </p>
+                    <button onClick={() => navigate('/setup')} className="btn btn-primary">
+                        Deploy Pod
+                    </button>
+                </div>
+            ) : generatedVideos.length === 0 ? (
                 <div className="app-surface" style={{
                     background: 'var(--bg-secondary)',
                     border: '1px dashed var(--border)',
