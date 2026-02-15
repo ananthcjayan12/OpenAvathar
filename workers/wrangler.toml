@@ -6,6 +6,23 @@ compatibility_date = "2024-01-01"
 # App secrets (e.g., Gumroad webhook secret) MUST be set via:
 #   wrangler secret put GUMROAD_SECRET --env production
 
+# Observability configuration for Cloudflare dashboard
+# This enables viewing console.log statements in the Cloudflare UI
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
 [env.production]
 kv_namespaces = [
   { binding = "LICENSES_KV", id = "${LICENSES_KV_ID}" }

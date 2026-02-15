@@ -27,6 +27,11 @@ export default {
     const url = new URL(request.url);
 
     try {
+      // Root status page for peace of mind
+      if (url.pathname === '/') {
+        return withCors(new Response('🚀 OpenAvathar API is running and healthy!', { status: 200 }));
+      }
+
       if (url.pathname === '/api/license/validate' && request.method === 'POST') {
         return withCors(await validateLicense(request, env));
       }
@@ -43,7 +48,10 @@ export default {
         return withCors(await trackGeneration(request, env));
       }
 
-      if (url.pathname === '/api/gumroad/webhook' && request.method === 'POST') {
+      if (url.pathname === '/api/gumroad/webhook') {
+        if (request.method === 'GET') {
+          return new Response('🟢 Gumroad Webhook Endpoint is Active (Waiting for POST requests)', { status: 200 });
+        }
         // Intentionally no CORS: server-to-server webhook.
         return await handleGumroadWebhook(request, env);
       }
