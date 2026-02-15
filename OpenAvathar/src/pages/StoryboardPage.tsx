@@ -5,7 +5,6 @@
  * Allows users to convert ideas or YouTube content into scripts and audio.
  */
 
-import { useState, useEffect } from 'react';
 import { useStoryboardStore } from '@/stores/storyboardStore';
 import { GeminiService } from '@/services/geminiService';
 import { ElevenLabsService } from '@/services/elevenLabsService';
@@ -36,8 +35,6 @@ export default function StoryboardPage() {
     setError,
     clearError,
   } = useStoryboardStore();
-
-  const [isInitialized, setIsInitialized] = useState(true);
 
   // Check if API keys are configured
   const hasGeminiKey = !!geminiApiKey;
@@ -172,10 +169,6 @@ export default function StoryboardPage() {
       });
     }
   };
-
-  if (!isInitialized) {
-    return null;
-  }
 
   // Empty state - show welcome message
   if (!hasGeminiKey || (!currentScript && scriptStatus === 'idle')) {

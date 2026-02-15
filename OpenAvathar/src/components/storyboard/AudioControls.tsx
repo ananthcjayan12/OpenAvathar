@@ -9,6 +9,9 @@ import { Volume2, Download, Loader2, Play, Pause, RotateCcw } from 'lucide-react
 import { useStoryboardStore } from '@/stores/storyboardStore';
 import { ElevenLabsService } from '@/services/elevenLabsService';
 
+// Cache duration for voice list (24 hours in milliseconds)
+const VOICE_CACHE_DURATION = 24 * 60 * 60 * 1000;
+
 interface AudioControlsProps {
   onGenerate: (voiceId: string) => void;
   isGenerating: boolean;
@@ -40,7 +43,7 @@ export default function AudioControls({
   // Load voices on mount if not cached or cache is old
   useEffect(() => {
     const shouldFetchVoices = !voicesLastFetched || 
-      (Date.now() - voicesLastFetched > 24 * 60 * 60 * 1000); // 24 hours
+      (Date.now() - voicesLastFetched > VOICE_CACHE_DURATION);
 
     if (elevenLabsApiKey && shouldFetchVoices) {
       fetchVoices();

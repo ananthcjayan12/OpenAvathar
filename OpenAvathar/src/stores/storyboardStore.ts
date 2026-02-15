@@ -265,14 +265,23 @@ export const useStoryboardStore = create<StoryboardState>()(
 );
 
 // Initialize API keys from secure storage on load
+// This runs after the module is loaded to ensure browser storage is available
+const initializeApiKeys = () => {
+  if (typeof window !== 'undefined') {
+    const geminiKey = secureStorage.get('gemini_api_key');
+    const elevenLabsKey = secureStorage.get('elevenlabs_api_key');
+    
+    if (geminiKey) {
+      useStoryboardStore.setState({ geminiApiKey: geminiKey });
+    }
+    if (elevenLabsKey) {
+      useStoryboardStore.setState({ elevenLabsApiKey: elevenLabsKey });
+    }
+  }
+};
+
+// Initialize on module load
 if (typeof window !== 'undefined') {
-  const geminiKey = secureStorage.get('gemini_api_key');
-  const elevenLabsKey = secureStorage.get('elevenlabs_api_key');
-  
-  if (geminiKey) {
-    useStoryboardStore.setState({ geminiApiKey: geminiKey });
-  }
-  if (elevenLabsKey) {
-    useStoryboardStore.setState({ elevenLabsApiKey: elevenLabsKey });
-  }
+  // Defer initialization to next tick to ensure DOM is ready
+  setTimeout(initializeApiKeys, 0);
 }

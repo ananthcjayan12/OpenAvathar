@@ -36,9 +36,12 @@ export default function ScriptDisplay({ script }: ScriptDisplayProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(script.narrationScript);
+      // TODO: Replace with toast notification for better UX
+      // For now, using alert as a temporary solution
       alert('Script copied to clipboard!');
     } catch (err) {
       console.error('Failed to copy:', err);
+      alert('Failed to copy script. Please try again.');
     }
   };
 

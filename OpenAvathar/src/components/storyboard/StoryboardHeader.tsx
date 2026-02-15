@@ -16,6 +16,8 @@ export default function StoryboardHeader() {
   };
 
   const handleNewSession = () => {
+    // TODO: Replace with custom confirmation modal for better UX
+    // For now, using native confirm as a temporary solution
     if (confirm('Start a new session? Current work will be saved to history.')) {
       resetSession();
     }
