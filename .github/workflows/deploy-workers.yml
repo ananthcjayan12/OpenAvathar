@@ -62,6 +62,15 @@ jobs:
           sed -i.bak "s/\${LICENSES_KV_ID}/$LICENSES_KV_ID/g" wrangler.toml
           cat wrangler.toml
 
+      - name: Set Worker Secrets
+        working-directory: ./${{ env.WORKER_DIR }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "${{ secrets.GUMROAD_SECRET }}" | npx wrangler secret put GUMROAD_SECRET --env production
+          echo "${{ secrets.GUMROAD_PRODUCT_ID }}" | npx wrangler secret put GUMROAD_PRODUCT_ID --env production
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
@@ -69,8 +78,5 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4'
           workingDirectory: ./${{ env.WORKER_DIR }}
-          command: |
-            secret put GUMROAD_SECRET --env production <<< "$GUMROAD_SECRET"
-            secret put GUMROAD_PRODUCT_ID --env production <<< "$GUMROAD_PRODUCT_ID"
-            deploy --env production
+          command: deploy --env production
 
