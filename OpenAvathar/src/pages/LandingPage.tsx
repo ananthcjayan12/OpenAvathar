@@ -706,7 +706,7 @@ function AccessPortal() {
                             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>Already purchased Pro?</p>
                             <button
                                 type="button"
-                                onClick={() => navigate('/studio')}
+                                onClick={() => navigate('/settings')}
                                 className="btn btn-secondary"
                                 style={{ width: '100%', fontSize: '0.9rem' }}
                             >
