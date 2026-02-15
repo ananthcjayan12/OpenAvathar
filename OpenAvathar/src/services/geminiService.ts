@@ -56,7 +56,7 @@ const SCRIPT_SCHEMA = {
 
 export class GeminiService {
   private apiKey: string;
-  private model = 'gemini-1.5-flash';
+  private model = 'gemini-3-flash-preview'
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
