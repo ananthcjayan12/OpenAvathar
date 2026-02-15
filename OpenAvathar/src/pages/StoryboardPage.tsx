@@ -29,6 +29,8 @@ export default function StoryboardPage() {
     audioUrl,
     audioBlob,
     error,
+    defaultTone,
+    targetDuration,
     setScriptStatus,
     setAudioStatus,
     setCurrentScript,
@@ -96,10 +98,12 @@ export default function StoryboardPage() {
       if (inputMode === 'idea') {
         result = await service.generateScript({
           mode: 'idea',
-          content: inputContent
+          content: inputContent,
+          tone: defaultTone,
+          targetDuration: targetDuration
         });
       } else {
-        result = await service.analyzeYouTubeVideo(youtubeUrl);
+        result = await service.analyzeYouTubeVideo(youtubeUrl, defaultTone, targetDuration);
       }
 
       if (result.success && result.data) {

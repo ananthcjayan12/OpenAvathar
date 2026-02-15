@@ -27,6 +27,7 @@ interface StoryboardState {
   elevenLabsApiKey: string | null;
   defaultVoiceId: string | null;
   defaultTone: ScriptTone;
+  targetDuration: number; // Target duration in seconds
   autoSave: boolean;
 
   // Current Session
@@ -58,6 +59,7 @@ interface StoryboardState {
   setElevenLabsApiKey: (key: string | null) => void;
   setDefaultVoiceId: (id: string | null) => void;
   setDefaultTone: (tone: ScriptTone) => void;
+  setTargetDuration: (duration: number) => void;
   setAutoSave: (enabled: boolean) => void;
 
   // Actions - Input
@@ -99,6 +101,7 @@ export const useStoryboardStore = create<StoryboardState>()(
       elevenLabsApiKey: null,
       defaultVoiceId: null,
       defaultTone: 'energetic',
+      targetDuration: 40, // Default 40 seconds
       autoSave: true,
 
       // Initial State - Session
@@ -146,6 +149,7 @@ export const useStoryboardStore = create<StoryboardState>()(
 
       setDefaultVoiceId: (id) => set({ defaultVoiceId: id }),
       setDefaultTone: (tone) => set({ defaultTone: tone }),
+      setTargetDuration: (duration) => set({ targetDuration: Math.max(10, Math.min(120, duration)) }), // Clamp between 10-120 seconds
       setAutoSave: (enabled) => set({ autoSave: enabled }),
 
       // Actions - Input
@@ -254,6 +258,7 @@ export const useStoryboardStore = create<StoryboardState>()(
       partialize: (state) => ({
         defaultVoiceId: state.defaultVoiceId,
         defaultTone: state.defaultTone,
+        targetDuration: state.targetDuration,
         autoSave: state.autoSave,
         savedScripts: state.savedScripts,
         voices: state.voices,

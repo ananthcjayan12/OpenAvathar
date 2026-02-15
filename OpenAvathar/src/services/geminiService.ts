@@ -87,7 +87,7 @@ export class GeminiService {
   /**
    * Analyze a YouTube video and generate a script
    */
-  async analyzeYouTubeVideo(url: string, tone: ScriptTone = 'energetic'): Promise<GenerationResult<Script>> {
+  async analyzeYouTubeVideo(url: string, tone: ScriptTone = 'energetic', targetDuration: number = 40): Promise<GenerationResult<Script>> {
     try {
       // Extract video ID from URL
       const videoId = this.extractYouTubeId(url);
@@ -101,7 +101,7 @@ export class GeminiService {
         };
       }
 
-      const prompt = this.buildYouTubePrompt(url, tone);
+      const prompt = this.buildYouTubePrompt(url, tone, targetDuration);
       const response = await this.callGeminiAPI(prompt);
       
       const script = this.parseResponse(response, tone);
@@ -202,29 +202,40 @@ Generate a complete, ready-to-record script optimized for maximum engagement.
   /**
    * Build YouTube analysis prompt
    */
-  private buildYouTubePrompt(url: string, tone: ScriptTone): string {
+  private buildYouTubePrompt(url: string, tone: ScriptTone, targetDuration: number = 40): string {
     const toneDescriptions = {
-      professional: 'professional, authoritative, and informative',
-      casual: 'conversational, friendly, and relatable',
-      energetic: 'high-energy, enthusiastic, and motivating',
+      professional: 'professional, clear, and authoritative',
+      casual: 'friendly, conversational, and approachable',
+      energetic: 'dynamic, enthusiastic, and high-energy',
       persuasive: 'compelling, persuasive, and action-oriented'
     };
 
     return `
-You are an expert at repurposing video content for social media.
+You are an expert at analyzing and repurposing video content for social media.
 
-TASK: Analyze this YouTube video and create a viral-style narration script that captures its key message.
+CRITICAL INSTRUCTIONS:
+1. Watch and CAREFULLY analyze the video at this URL: ${url}
+2. Base your script ONLY on the ACTUAL content, message, and key points from this specific video
+3. Do NOT create generic content or hallucinate information not present in the video
+4. If you cannot access the video, return an error message instead of guessing
 
-VIDEO URL: ${url}
+TASK: Create a viral-style narration script that accurately represents this video's message.
 
-REQUIREMENTS:
-1. Extract the core message and key points from the video
-2. Transform it into a compelling 30-60 second narration script
-3. Tone: ${toneDescriptions[tone]}
-4. Optimize for social media engagement (hooks, pacing, call-to-action)
-5. Maintain the original message while making it more engaging
+TARGET LENGTH: Approximately ${targetDuration} seconds of narration
 
-Generate a complete script that would work as a standalone viral reel, even for people who haven't seen the original video.
+CONTENT REQUIREMENTS:
+- Extract the SPECIFIC core message and key points from THIS video
+- Identify the video's unique angle, examples, or insights
+- Preserve factual accuracy - do not invent details or examples
+- Transform the message into a compelling ${targetDuration}-second narration script
+- Tone: ${toneDescriptions[tone]}
+
+SCRIPT STRUCTURE:
+1. Hook (3-5 seconds): Grab attention with the video's most compelling insight
+2. Core Message (${Math.round(targetDuration * 0.7)} seconds): Deliver the key points clearly and engagingly
+3. Call-to-Action (5 seconds): Strong closing that prompts engagement
+
+Generate a script that accurately represents the video content while being optimized for social media engagement.
 `;
   }
 
@@ -245,9 +256,7 @@ Generate a complete script that would work as a standalone viral reel, even for 
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: SCRIPT_SCHEMA,
-          temperature: 0.9,
-          topK: 40,
-          topP: 0.95,
+          temperature: 1.2, // Higher temperature for more creative, varied outputs
           maxOutputTokens: 2048
         }
       },

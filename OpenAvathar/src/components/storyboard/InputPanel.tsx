@@ -21,7 +21,9 @@ export default function InputPanel({ onGenerate, isGenerating }: InputPanelProps
     setInputContent,
     setYoutubeUrl,
     defaultTone,
-    setDefaultTone
+    setDefaultTone,
+    targetDuration,
+    setTargetDuration
   } = useStoryboardStore();
 
   const isIdea = inputMode === 'idea';
@@ -151,6 +153,43 @@ Example: Create a script about the benefits of morning routines for productivity
           <option value="casual">Casual - Conversational and friendly</option>
           <option value="persuasive">Persuasive - Compelling and action-oriented</option>
         </select>
+      </div>
+
+      {/* Target Duration Input */}
+      <div style={{ marginTop: '16px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: 500,
+          marginBottom: '8px',
+          color: 'var(--text-primary)'
+        }}>
+          Target Duration (seconds)
+        </label>
+        <input
+          type="number"
+          min="10"
+          max="120"
+          value={targetDuration}
+          onChange={(e) => setTargetDuration(Number(e.target.value))}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            color: 'var(--text-primary)',
+            fontSize: '14px',
+            fontFamily: 'inherit'
+          }}
+        />
+        <p style={{
+          marginTop: '6px',
+          fontSize: '12px',
+          color: 'var(--text-secondary)'
+        }}>
+          Recommended: 30-60 seconds for optimal engagement
+        </p>
       </div>
 
       {/* Generate Button */}
