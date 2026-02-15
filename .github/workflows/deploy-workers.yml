@@ -5,6 +5,7 @@ on:
     branches:
       - prod
       - v1
+      - main
   workflow_dispatch:
 
 env:
