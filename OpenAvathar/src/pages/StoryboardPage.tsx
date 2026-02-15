@@ -5,6 +5,7 @@
  * Allows users to convert ideas or YouTube content into scripts and audio.
  */
 
+import { useEffect } from 'react';
 import { useStoryboardStore } from '@/stores/storyboardStore';
 import { GeminiService } from '@/services/geminiService';
 import { ElevenLabsService } from '@/services/elevenLabsService';
@@ -13,6 +14,7 @@ import StoryboardHeader from '@/components/storyboard/StoryboardHeader';
 import InputPanel from '@/components/storyboard/InputPanel';
 import ScriptDisplay from '@/components/storyboard/ScriptDisplay';
 import AudioControls from '@/components/storyboard/AudioControls';
+import { secureStorage } from '@/utils/secureStorage';
 
 export default function StoryboardPage() {
   const {
@@ -34,7 +36,22 @@ export default function StoryboardPage() {
     setAudioBlob,
     setError,
     clearError,
+    setGeminiApiKey,
+    setElevenLabsApiKey,
   } = useStoryboardStore();
+
+  // Load API keys from secure storage on mount
+  useEffect(() => {
+    const geminiKey = secureStorage.get('gemini_api_key');
+    const elevenLabsKey = secureStorage.get('elevenlabs_api_key');
+    
+    if (geminiKey && !geminiApiKey) {
+      setGeminiApiKey(geminiKey);
+    }
+    if (elevenLabsKey && !elevenLabsApiKey) {
+      setElevenLabsApiKey(elevenLabsKey);
+    }
+  }, [geminiApiKey, elevenLabsApiKey, setGeminiApiKey, setElevenLabsApiKey]);
 
   // Check if API keys are configured
   const hasGeminiKey = !!geminiApiKey;
