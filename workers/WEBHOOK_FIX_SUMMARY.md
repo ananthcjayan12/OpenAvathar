@@ -88,6 +88,11 @@ This means **all `console.log` statements are now visible in the Cloudflare dash
    - Added comprehensive logging
    - Added refund handling
 
+2. **`workers/wrangler.toml`**
+   - Added observability configuration
+   - Enabled logs with persistence and invocation logs
+   - All console.log statements now visible in Cloudflare dashboard
+
 ## New Files Created
 
 1. **`workers/test-webhook.js`**
