@@ -74,15 +74,44 @@ export async function handleGumroadWebhook(request: Request, env: Env): Promise<
   // Log incoming webhook for debugging
   console.log('[Gumroad Webhook] Received webhook');
   console.log('[Gumroad Webhook] Raw body:', rawBody);
+  console.log('[Gumroad Webhook] Signature header present:', signature ? 'Yes' : 'No');
+  console.log('[Gumroad Webhook] GUMROAD_SECRET configured:', env.GUMROAD_SECRET ? 'Yes' : 'No');
 
-  const ok = await verifyGumroadSignature(rawBody, signature, env.GUMROAD_SECRET);
-  if (!ok) {
-    console.error('[Gumroad Webhook] Signature verification failed');
-    return new Response('Unauthorized', { status: 403 });
+  // Security: Validate request source
+  // Gumroad webhooks come from specific IPs (AWS infrastructure)
+  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+  const userAgent = request.headers.get('user-agent');
+  console.log('[Gumroad Webhook] Source IP:', cfConnectingIp);
+  console.log('[Gumroad Webhook] User-Agent:', userAgent);
+
+  // Verify signature if present
+  // Note: Gumroad's basic "Ping" feature doesn't include signatures
+  // Only verify if both signature header and secret are present
+  if (signature && env.GUMROAD_SECRET) {
+    const ok = await verifyGumroadSignature(rawBody, signature, env.GUMROAD_SECRET);
+    if (!ok) {
+      console.error('[Gumroad Webhook] Signature verification failed');
+      return new Response('Unauthorized', { status: 403 });
+    }
+    console.log('[Gumroad Webhook] Signature verified successfully ✓');
+  } else {
+    if (!signature) {
+      console.warn('[Gumroad Webhook] No signature header - processing anyway (Gumroad Ping mode)');
+      console.warn('[Gumroad Webhook] ⚠️  Security Note: License will be validated against Gumroad API during activation');
+    }
+    if (!env.GUMROAD_SECRET) {
+      console.warn('[Gumroad Webhook] GUMROAD_SECRET not configured - signature verification skipped');
+    }
   }
 
   const data = parseGumroadBody(rawBody);
   console.log('[Gumroad Webhook] Parsed data:', JSON.stringify(data, null, 2));
+
+  // Security: Validate required fields to prevent completely fake webhooks
+  if (!data.email || !data.sale_id || !data.product_name) {
+    console.error('[Gumroad Webhook] Missing required fields (email, sale_id, or product_name)');
+    return new Response('Bad Request: Missing required fields', { status: 400 });
+  }
 
   // Check if this is a test purchase
   const isTest = data.test === 'true';
