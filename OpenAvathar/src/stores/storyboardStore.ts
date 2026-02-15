@@ -16,7 +16,6 @@ import type {
   GenerationStatus,
   ScriptTone,
   Voice,
-  AudioGenerationOptions,
   SavedScript,
   UserFacingError
 } from '@/types/storyboard';

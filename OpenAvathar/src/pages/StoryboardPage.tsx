@@ -37,11 +37,7 @@ export default function StoryboardPage() {
     clearError,
   } = useStoryboardStore();
 
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    setIsInitialized(true);
-  }, []);
+  const [isInitialized, setIsInitialized] = useState(true);
 
   // Check if API keys are configured
   const hasGeminiKey = !!geminiApiKey;

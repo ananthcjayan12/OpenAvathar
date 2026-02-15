@@ -8,7 +8,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Volume2, Download, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { useStoryboardStore } from '@/stores/storyboardStore';
 import { ElevenLabsService } from '@/services/elevenLabsService';
-import type { Voice } from '@/types/storyboard';
 
 interface AudioControlsProps {
   onGenerate: (voiceId: string) => void;
@@ -46,6 +45,7 @@ export default function AudioControls({
     if (elevenLabsApiKey && shouldFetchVoices) {
       fetchVoices();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elevenLabsApiKey]);
 
   const fetchVoices = async () => {

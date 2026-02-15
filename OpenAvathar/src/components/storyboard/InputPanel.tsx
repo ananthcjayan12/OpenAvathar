@@ -6,6 +6,7 @@
 
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useStoryboardStore } from '@/stores/storyboardStore';
+import type { ScriptTone } from '@/types/storyboard';
 
 interface InputPanelProps {
   onGenerate: () => void;
@@ -132,7 +133,7 @@ Example: Create a script about the benefits of morning routines for productivity
         </label>
         <select
           value={defaultTone}
-          onChange={(e) => setDefaultTone(e.target.value as any)}
+          onChange={(e) => setDefaultTone(e.target.value as ScriptTone)}
           style={{
             width: '100%',
             padding: '10px 16px',
