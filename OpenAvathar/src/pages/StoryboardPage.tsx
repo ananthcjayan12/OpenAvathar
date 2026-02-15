@@ -170,8 +170,8 @@ export default function StoryboardPage() {
     }
   };
 
-  // Empty state - show welcome message
-  if (!hasGeminiKey || (!currentScript && scriptStatus === 'idle')) {
+  // Empty state - show welcome message only when no API key
+  if (!hasGeminiKey) {
     return (
       <div style={{
         height: '100%',
@@ -252,19 +252,11 @@ export default function StoryboardPage() {
               lineHeight: 1.6,
               marginBottom: '32px'
             }}>
-              {!hasGeminiKey ? (
-                <>
-                  To get started, you'll need to configure your Google Gemini API key.
-                  This allows you to generate professional scripts from your ideas or YouTube content.
-                </>
-              ) : (
-                <>
-                  Ready to create your first script! Choose to start from an idea or analyze a YouTube video.
-                </>
-              )}
+              To get started, you'll need to configure your Google Gemini API key.
+              This allows you to generate professional scripts from your ideas or YouTube content.
             </p>
 
-            {!hasGeminiKey ? (
+            {!hasGeminiKey && (
               <button
                 onClick={() => window.location.href = '/settings'}
                 style={{
@@ -289,14 +281,6 @@ export default function StoryboardPage() {
               >
                 Configure API Keys
               </button>
-            ) : (
-              <div style={{ 
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'center'
-              }}>
-                <StoryboardHeader />
-              </div>
             )}
 
             <div style={{
