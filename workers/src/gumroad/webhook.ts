@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import { generateLicenseKey } from '../utils/license-gen';
 import { verifyGumroadSignature } from '../utils/signature';
+import { getLicenseFromDb, putLicenseInDb, type LicenseRecord } from '../license/verification';
 
 interface GumroadPayload {
   email?: string;
@@ -8,6 +9,7 @@ interface GumroadPayload {
   product_name?: string;
   price?: string;
   currency?: string;
+  license_key?: string;
 }
 
 function parseGumroadBody(raw: string): GumroadPayload {
@@ -29,6 +31,7 @@ function parseGumroadBody(raw: string): GumroadPayload {
     product_name: params.get('product_name') ?? undefined,
     price: params.get('price') ?? undefined,
     currency: params.get('currency') ?? undefined,
+    license_key: params.get('license_key') ?? undefined,
   };
 }
 
@@ -42,21 +45,24 @@ export async function handleGumroadWebhook(request: Request, env: Env): Promise<
   }
 
   const data = parseGumroadBody(rawBody);
-  const licenseKey = generateLicenseKey();
+  const licenseKey = data.license_key?.trim() || generateLicenseKey();
 
-  await env.LICENSES_KV.put(
-    licenseKey,
-    JSON.stringify({
-      email: data.email ?? null,
-      purchaseId: data.sale_id ?? null,
-      purchaseDate: new Date().toISOString(),
-      activations: [],
-      maxActivations: 3,
-      product: data.product_name ?? 'OpenAvathar Pro (Lifetime)',
-      price: data.price ?? null,
-      currency: data.currency ?? null,
-    })
-  );
+  const existing = await getLicenseFromDb(licenseKey, env);
+  const upserted: LicenseRecord = {
+    source: 'gumroad',
+    email: data.email ?? existing?.email ?? null,
+    purchaseId: data.sale_id ?? existing?.purchaseId ?? null,
+    purchaseDate: existing?.purchaseDate ?? new Date().toISOString(),
+    activations: existing?.activations ?? [],
+    maxActivations: existing?.maxActivations ?? 3,
+    product: data.product_name ?? existing?.product ?? 'OpenAvathar Pro (Lifetime)',
+    price: data.price ?? existing?.price ?? null,
+    currency: data.currency ?? existing?.currency ?? null,
+    lastActivated: existing?.lastActivated,
+    lastVerifiedAt: new Date().toISOString(),
+  };
+
+  await putLicenseInDb(licenseKey, upserted, env);
 
   // Note: delivery of the key is handled by Gumroad (license key in email),
   // or by manual fulfillment. This endpoint just records it.

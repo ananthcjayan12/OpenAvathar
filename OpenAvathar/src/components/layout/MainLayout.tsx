@@ -21,8 +21,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 >
                     <Menu size={24} color="var(--text-primary)" />
                 </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)' }}>OpenAvathar</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <img src="/logo.png" alt="" style={{ width: '24px', height: '24px' }} />
+                    <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>OpenAvathar</span>
                 </div>
                 <div style={{ width: '24px' }}></div> {/* Spacer for centering */}
             </div>

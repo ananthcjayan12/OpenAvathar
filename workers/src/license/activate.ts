@@ -1,14 +1,11 @@
 import type { Env } from '../types';
 import { jsonResponse } from '../types';
-
-interface LicenseRecord {
-  email?: string;
-  purchaseId?: string;
-  purchaseDate?: string;
-  activations: string[];
-  maxActivations: number;
-  lastActivated?: string;
-}
+import {
+  ensureGumroadLicenseStillValid,
+  putLicenseInDb,
+  resolveLicense,
+  type LicenseRecord,
+} from './verification';
 
 export async function activateLicense(request: Request, env: Env): Promise<Response> {
   const body = (await request.json().catch(() => null)) as { licenseKey?: string; fingerprint?: string } | null;
@@ -19,29 +16,36 @@ export async function activateLicense(request: Request, env: Env): Promise<Respo
     return jsonResponse({ success: false, error: 'Missing licenseKey or fingerprint' }, { status: 400 });
   }
 
-  const licenseData = await env.LICENSES_KV.get(licenseKey);
-  if (!licenseData) {
+  const license = await resolveLicense(licenseKey, env);
+  if (!license) {
     return jsonResponse({ success: false, error: 'Invalid license key' }, { status: 404 });
   }
 
-  const license = JSON.parse(licenseData) as LicenseRecord;
-  license.activations = Array.isArray(license.activations) ? license.activations : [];
+  const stillValid = await ensureGumroadLicenseStillValid(licenseKey, license, env);
+  if (!stillValid) {
+    return jsonResponse({ success: false, error: 'License is no longer valid with Gumroad' }, { status: 403 });
+  }
 
-  if (license.activations.includes(fingerprint)) {
+  const mutableLicense: LicenseRecord = {
+    ...license,
+    activations: Array.isArray(license.activations) ? license.activations : [],
+  };
+
+  if (mutableLicense.activations.includes(fingerprint)) {
     return jsonResponse({ success: true, message: 'Already activated on this device' });
   }
 
-  if ((license.activations.length ?? 0) >= (license.maxActivations ?? 0)) {
+  if ((mutableLicense.activations.length ?? 0) >= (mutableLicense.maxActivations ?? 0)) {
     return jsonResponse(
-      { success: false, error: `License already activated on ${license.maxActivations} devices` },
+      { success: false, error: `License already activated on ${mutableLicense.maxActivations} devices` },
       { status: 403 }
     );
   }
 
-  license.activations.push(fingerprint);
-  license.lastActivated = new Date().toISOString();
+  mutableLicense.activations.push(fingerprint);
+  mutableLicense.lastActivated = new Date().toISOString();
 
-  await env.LICENSES_KV.put(licenseKey, JSON.stringify(license));
+  await putLicenseInDb(licenseKey, mutableLicense, env);
   await env.LICENSES_KV.put(`fp:${fingerprint}`, licenseKey);
 
   return jsonResponse({ success: true, message: 'License activated on this device' });

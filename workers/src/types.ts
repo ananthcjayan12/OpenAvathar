@@ -1,6 +1,7 @@
 export interface Env {
   LICENSES_KV: KVNamespace;
   GUMROAD_SECRET: string;
+  GUMROAD_PRODUCT_ID?: string;
 }
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };

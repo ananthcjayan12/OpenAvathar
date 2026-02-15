@@ -88,19 +88,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     padding: '0 8px',
                     marginTop: '8px'
                 }}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
-                        background: 'var(--gradient-primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 0 15px var(--accent-glow)'
-                    }}>
-                        <Wand2 size={20} color="white" />
-                    </div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+                    <img
+                        src="/logo.png"
+                        alt="Logo"
+                        style={{
+                            width: '32px',
+                            height: '32px',
+                            objectFit: 'contain'
+                        }}
+                    />
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
                         Open<span className="text-gradient">Avathar</span>
                     </h2>
                 </div>

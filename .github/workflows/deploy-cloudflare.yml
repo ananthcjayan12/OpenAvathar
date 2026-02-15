@@ -44,6 +44,10 @@ jobs:
             echo "Missing required secret: VITE_WORKER_URL"
             exit 1
           fi
+          if [ -z "${VITE_GUMROAD_URL}" ]; then
+            echo "Missing required secret: VITE_GUMROAD_URL"
+            exit 1
+          fi
 
       - name: Build Frontend
         working-directory: ./OpenAvathar

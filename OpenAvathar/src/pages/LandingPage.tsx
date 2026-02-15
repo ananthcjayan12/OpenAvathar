@@ -47,18 +47,16 @@ function Navbar() {
             }}
         >
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '1.2rem', color: 'var(--text-primary)' }}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        background: 'var(--gradient-primary)',
-                        borderRadius: '8px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        color: 'white'
-                    }}>
-                        <Sparkles size={18} fill="currentColor" />
-                    </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 800, fontSize: '1.25rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                    <img
+                        src="/logo.png"
+                        alt="OpenAvathar Logo"
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            objectFit: 'contain'
+                        }}
+                    />
                     OpenAvathar
                 </div>
 
@@ -171,10 +169,16 @@ function Hero() {
                             overflow: 'hidden',
                             position: 'relative'
                         }}>
-                            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                                <Video size={64} style={{ opacity: 0.2, margin: '0 auto 16px' }} />
-                                <div style={{ fontWeight: 600 }}>Interactive Studio Interface</div>
-                            </div>
+                            <img
+                                src="/demo-preview.jpg"
+                                alt="OpenAvathar Studio Demo"
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    display: 'block'
+                                }}
+                            />
 
                             {/* Floating UI elements */}
                             <motion.div
@@ -526,7 +530,10 @@ function Features() {
 }
 
 function Pricing() {
-    const gumroadUrl = import.meta.env.VITE_GUMROAD_URL;
+    const gumroadUrl = import.meta.env.VITE_GUMROAD_URL as string | undefined;
+    const gumroadCheckoutUrl = gumroadUrl
+        ? `${gumroadUrl}${gumroadUrl.includes('?') ? '&' : '?'}wanted=true`
+        : undefined;
 
     return (
         <section id="pricing" style={{ padding: '100px 0', background: 'white' }}>
@@ -570,8 +577,13 @@ function Pricing() {
                         </div>
                         <h3 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#94a3b8' }}>Pro License</h3>
                         <div style={{ margin: '20px 0' }}>
-                            <span style={{ fontSize: '3.5rem', fontWeight: 800 }}>$89</span>
-                            <span style={{ fontSize: '1.2rem', color: '#94a3b8' }}> / lifetime</span>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                <span style={{ fontSize: '3.5rem', fontWeight: 800 }}>$39</span>
+                                <span style={{ fontSize: '1.2rem', color: '#94a3b8' }}> / lifetime</span>
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700, marginTop: '-8px' }}>
+                                ✨ EARLY BIRD OFFER (Save 60%)
+                            </div>
                         </div>
                         <p style={{ marginBottom: '32px', color: '#cbd5e1' }}>Unlock the full power of your hardware with specialized tools.</p>
 
@@ -583,14 +595,28 @@ function Pricing() {
                         </div>
 
                         <a
-                            href={gumroadUrl || '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn btn-primary"
-                            style={{ width: '100%', justifyContent: 'center', background: 'var(--accent)', border: 'none', textDecoration: 'none' }}
+                            href={gumroadCheckoutUrl}
+                            className="btn btn-primary gumroad-cta-btn"
+                            data-gumroad-overlay-checkout="true"
+                            style={{
+                                width: '100%',
+                                justifyContent: 'center',
+                                background: 'var(--gradient-primary)',
+                                border: 'none',
+                                textDecoration: 'none',
+                                color: 'white',
+                                fontWeight: 700,
+                                boxShadow: '0 10px 24px -10px var(--accent)',
+                                pointerEvents: gumroadCheckoutUrl ? 'auto' : 'none',
+                                opacity: gumroadCheckoutUrl ? 1 : 0.6
+                            }}
+                            aria-disabled={!gumroadCheckoutUrl}
                         >
                             Get Lifetime Access
                         </a>
+                        <p className="gumroad-cta-note">
+                            Secure checkout by Gumroad. Payment completes on Gumroad checkout.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -710,8 +736,8 @@ export default function LandingPage() {
 
             <footer style={{ background: 'white', padding: '60px 0', borderTop: '1px solid var(--border)' }}>
                 <div className="container" style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        <Sparkles size={20} color="var(--accent)" /> OpenAvathar
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '20px', fontWeight: 800, color: 'var(--text-primary)', fontSize: '1.1rem' }}>
+                        <img src="/logo.png" alt="" style={{ width: '24px', height: '24px' }} /> OpenAvathar
                     </div>
                     <p style={{ marginBottom: '20px' }}>&copy; {new Date().getFullYear()} OpenAvathar. Open source and privacy first.</p>
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '24px' }}>

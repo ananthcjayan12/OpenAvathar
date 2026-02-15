@@ -36,6 +36,9 @@ export default function SettingsPage() {
     const [isActivating, setIsActivating] = useState(false);
 
     const gumroadUrl = (import.meta.env.VITE_GUMROAD_URL as string | undefined) ?? '';
+    const gumroadCheckoutUrl = gumroadUrl
+        ? `${gumroadUrl}${gumroadUrl.includes('?') ? '&' : '?'}wanted=true`
+        : '';
 
     const handleActivate = async () => {
         setLicenseMessage(null);
@@ -124,16 +127,19 @@ export default function SettingsPage() {
                     >
                         {isActivating ? 'Activating...' : 'Activate'}
                     </button>
-                    <a
+                    <button
+                        type="button"
                         className="btn btn-secondary"
-                        href={gumroadUrl || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ pointerEvents: gumroadUrl ? 'auto' : 'none', opacity: gumroadUrl ? 1 : 0.6 }}
-                        aria-disabled={!gumroadUrl}
+                        onClick={() => {
+                            if (!gumroadCheckoutUrl) return;
+                            window.location.assign(gumroadCheckoutUrl);
+                        }}
+                        style={{ pointerEvents: gumroadCheckoutUrl ? 'auto' : 'none', opacity: gumroadCheckoutUrl ? 1 : 0.6 }}
+                        disabled={!gumroadCheckoutUrl}
+                        aria-disabled={!gumroadCheckoutUrl}
                     >
                         Upgrade <ExternalLink size={14} />
-                    </a>
+                    </button>
                 </div>
 
                 <div style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>

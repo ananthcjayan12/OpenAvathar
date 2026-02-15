@@ -18,6 +18,8 @@ jobs:
       contents: read
     env:
       LICENSES_KV_ID: ${{ secrets.LICENSES_KV_ID }}
+      GUMROAD_SECRET: ${{ secrets.GUMROAD_SECRET }}
+      GUMROAD_PRODUCT_ID: ${{ secrets.GUMROAD_PRODUCT_ID }}
 
     steps:
       - name: Checkout
@@ -44,6 +46,14 @@ jobs:
             echo "Missing required secret: LICENSES_KV_ID"
             exit 1
           fi
+          if [ -z "${GUMROAD_SECRET}" ]; then
+            echo "Missing required secret: GUMROAD_SECRET"
+            exit 1
+          fi
+          if [ -z "${GUMROAD_PRODUCT_ID}" ]; then
+            echo "Missing required secret: GUMROAD_PRODUCT_ID"
+            exit 1
+          fi
 
       - name: Inject KV namespace ID into wrangler.toml
         working-directory: ./${{ env.WORKER_DIR }}
@@ -58,5 +68,8 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: '4'
           workingDirectory: ./${{ env.WORKER_DIR }}
-          command: deploy --env production
+          command: |
+            secret put GUMROAD_SECRET --env production <<< "$GUMROAD_SECRET"
+            secret put GUMROAD_PRODUCT_ID --env production <<< "$GUMROAD_PRODUCT_ID"
+            deploy --env production
 
