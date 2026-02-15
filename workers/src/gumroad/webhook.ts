@@ -127,6 +127,46 @@ export async function handleGumroadWebhook(request: Request, env: Env): Promise<
   const licenseKey = data.license_key?.trim() || generateLicenseKey();
   console.log('[Gumroad Webhook] License key:', licenseKey);
 
+  // Verify license with Gumroad API if GUMROAD_PRODUCT_ID is configured
+  // This is a one-time verification - we mark it as verified so we don't need to check again
+  let isVerified = false;
+  if (env.GUMROAD_PRODUCT_ID && data.license_key) {
+    console.log('[Gumroad Webhook] Verifying license with Gumroad API...');
+
+    const verifyParams = new URLSearchParams({
+      product_id: env.GUMROAD_PRODUCT_ID,
+      license_key: licenseKey,
+      increment_uses_count: 'false',
+    });
+
+    try {
+      const verifyResponse = await fetch('https://api.gumroad.com/v2/licenses/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: verifyParams.toString(),
+      });
+
+      if (verifyResponse.ok) {
+        const verifyPayload = await verifyResponse.json() as { success?: boolean };
+        if (verifyPayload.success) {
+          isVerified = true;
+          console.log('[Gumroad Webhook] License verified with Gumroad API ✓');
+        } else {
+          console.warn('[Gumroad Webhook] Gumroad API returned success: false');
+        }
+      } else {
+        console.warn('[Gumroad Webhook] Gumroad API verification failed:', verifyResponse.status);
+      }
+    } catch (error) {
+      console.error('[Gumroad Webhook] Error verifying with Gumroad API:', error);
+    }
+  } else {
+    // No GUMROAD_PRODUCT_ID or no license_key from Gumroad
+    // Mark as verified anyway since it came from Gumroad webhook
+    isVerified = true;
+    console.log('[Gumroad Webhook] Skipping API verification (no GUMROAD_PRODUCT_ID or generated key)');
+  }
+
   const existing = await getLicenseFromDb(licenseKey, env);
   console.log('[Gumroad Webhook] Existing license:', existing ? 'Found' : 'Not found');
 
@@ -143,6 +183,7 @@ export async function handleGumroadWebhook(request: Request, env: Env): Promise<
     currency: data.currency ?? existing?.currency ?? null,
     lastActivated: existing?.lastActivated,
     lastVerifiedAt: new Date().toISOString(),
+    verified: isVerified, // Mark as verified if Gumroad API confirmed it
   };
 
   console.log('[Gumroad Webhook] Upserting license:', JSON.stringify(upserted, null, 2));

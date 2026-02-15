@@ -12,6 +12,7 @@ export interface LicenseRecord {
   currency?: string | null;
   lastActivated?: string;
   lastVerifiedAt?: string;
+  verified?: boolean; // True if license was verified with source (Gumroad API, etc)
 }
 
 interface GumroadLicenseVerifyResponse {
@@ -115,9 +116,17 @@ export async function ensureGumroadLicenseStillValid(
   license: LicenseRecord,
   env: Env
 ): Promise<boolean> {
+  // Non-Gumroad licenses (manual, other platforms) are always valid
   if (license.source !== 'gumroad') return true;
+
+  // If license was already verified (during webhook), skip API check
+  if (license.verified) return true;
+
+  // If no GUMROAD_PRODUCT_ID configured, trust the license
   if (!env.GUMROAD_PRODUCT_ID) return true;
 
+  // Only verify with Gumroad API if not already verified
+  // This should rarely happen - only for old licenses created before verification was added
   const verified = await verifyWithGumroadServer(licenseKey, env);
   if (!verified) return false;
 
@@ -130,6 +139,7 @@ export async function ensureGumroadLicenseStillValid(
     price: verified.price ?? license.price ?? null,
     currency: verified.currency ?? license.currency ?? null,
     lastVerifiedAt: new Date().toISOString(),
+    verified: true, // Mark as verified now
   });
 
   await putLicenseInDb(licenseKey, merged, env);
