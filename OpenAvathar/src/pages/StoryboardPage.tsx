@@ -31,6 +31,7 @@ export default function StoryboardPage() {
     error,
     defaultTone,
     targetDuration,
+    selectedLanguage,
     setScriptStatus,
     setAudioStatus,
     setCurrentScript,
@@ -46,7 +47,7 @@ export default function StoryboardPage() {
   useEffect(() => {
     const geminiKey = secureStorage.get('gemini_api_key');
     const elevenLabsKey = secureStorage.get('elevenlabs_api_key');
-    
+
     if (geminiKey && !geminiApiKey) {
       setGeminiApiKey(geminiKey);
     }
@@ -80,8 +81,8 @@ export default function StoryboardPage() {
     if (!content.trim()) {
       setError({
         title: 'Input Required',
-        message: inputMode === 'idea' 
-          ? 'Please enter your content idea.' 
+        message: inputMode === 'idea'
+          ? 'Please enter your content idea.'
           : 'Please enter a YouTube URL.',
         severity: 'warning'
       });
@@ -100,10 +101,16 @@ export default function StoryboardPage() {
           mode: 'idea',
           content: inputContent,
           tone: defaultTone,
-          targetDuration: targetDuration
+          targetDuration: targetDuration,
+          language: selectedLanguage || undefined
         });
       } else {
-        result = await service.analyzeYouTubeVideo(youtubeUrl, defaultTone, targetDuration);
+        result = await service.analyzeYouTubeVideo(
+          youtubeUrl,
+          defaultTone,
+          targetDuration,
+          selectedLanguage || undefined
+        );
       }
 
       if (result.success && result.data) {
@@ -206,8 +213,8 @@ export default function StoryboardPage() {
           borderBottom: '1px solid var(--border-color)',
           background: 'var(--bg-secondary)'
         }}>
-          <h1 style={{ 
-            fontSize: '24px', 
+          <h1 style={{
+            fontSize: '24px',
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
@@ -354,9 +361,9 @@ export default function StoryboardPage() {
           alignItems: 'start',
           gap: '12px'
         }}>
-          <AlertCircle 
-            size={20} 
-            color={error.severity === 'error' ? '#ef4444' : '#f59e0b'} 
+          <AlertCircle
+            size={20}
+            color={error.severity === 'error' ? '#ef4444' : '#f59e0b'}
           />
           <div style={{ flex: 1 }}>
             <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: 600 }}>
@@ -409,7 +416,7 @@ export default function StoryboardPage() {
         alignContent: 'start'
       }}>
         {/* Input Panel */}
-        <InputPanel 
+        <InputPanel
           onGenerate={handleGenerateScript}
           isGenerating={scriptStatus === 'generating'}
         />
@@ -421,7 +428,7 @@ export default function StoryboardPage() {
 
         {/* Audio Controls */}
         {currentScript && hasElevenLabsKey && (
-          <AudioControls 
+          <AudioControls
             onGenerate={handleGenerateAudio}
             isGenerating={audioStatus === 'generating'}
             audioUrl={audioUrl}

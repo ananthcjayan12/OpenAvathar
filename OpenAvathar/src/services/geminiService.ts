@@ -31,7 +31,7 @@ const SCRIPT_SCHEMA = {
     },
     narration_script: {
       type: 'string',
-      description: 'Complete narration script optimized for viral content'
+      description: 'Complete narration script with expressive markers for audio generation. Include emotion/tone markers like [thoughtful], [excited], [annoyed], [surprised], [long pause], [clears throat], [exhales sharply] etc. to guide voice expression.'
     },
     segments: {
       type: 'array',
@@ -69,9 +69,9 @@ export class GeminiService {
     try {
       const prompt = this.buildPrompt(input);
       const response = await this.callGeminiAPI(prompt);
-      
+
       const script = this.parseResponse(response, input.tone || 'energetic');
-      
+
       return {
         success: true,
         data: script
@@ -87,7 +87,7 @@ export class GeminiService {
   /**
    * Analyze a YouTube video and generate a script
    */
-  async analyzeYouTubeVideo(url: string, tone: ScriptTone = 'energetic', targetDuration: number = 40): Promise<GenerationResult<Script>> {
+  async analyzeYouTubeVideo(url: string, tone: ScriptTone = 'energetic', targetDuration: number = 40, language?: string): Promise<GenerationResult<Script>> {
     try {
       // Extract video ID from URL
       const videoId = this.extractYouTubeId(url);
@@ -101,11 +101,12 @@ export class GeminiService {
         };
       }
 
-      const prompt = this.buildYouTubePrompt(url, tone, targetDuration);
-      const response = await this.callGeminiAPI(prompt);
-      
+      const prompt = this.buildYouTubePrompt(tone, targetDuration, language);
+      const response = await this.callGeminiAPIWithVideo(prompt, url);
+
+
       const script = this.parseResponse(response, tone);
-      
+
       return {
         success: true,
         data: script
@@ -138,11 +139,11 @@ Provide an improved version that addresses the feedback while maintaining the sc
 
       const response = await this.callGeminiAPI(prompt);
       const refinedScript = this.parseResponse(response, script.metadata.tone);
-      
+
       // Preserve the original ID and update timestamp
       refinedScript.id = script.id;
       refinedScript.metadata.updatedAt = Date.now();
-      
+
       return {
         success: true,
         data: refinedScript
@@ -168,13 +169,19 @@ Provide an improved version that addresses the feedback while maintaining the sc
 
     const tone = input.tone || 'energetic';
     const targetDuration = input.targetDuration || 30;
+    const language = input.language || 'English';
 
     return `
 You are an expert viral content strategist specializing in social media reels and short-form video content.
 
-TASK: Create a compelling narration script for a ${targetDuration}-second video.
+TASK: Create a compelling narration script for a ${targetDuration}-second video in ${language}.
 
 INPUT: ${input.content}
+
+LANGUAGE REQUIREMENTS:
+- Generate the ENTIRE script in ${language}
+- Use natural, native expressions and idioms
+- Maintain cultural relevance and authenticity
 
 REQUIREMENTS:
 1. HOOK: Create an attention-grabbing opener (first 3-5 seconds) that stops scrolling
@@ -183,6 +190,15 @@ REQUIREMENTS:
 4. ENGAGEMENT: Include pattern interrupts and compelling transitions
 5. LENGTH: Target approximately ${targetDuration} seconds of narration
 6. STRUCTURE: Clear beginning, valuable middle, strong call-to-action
+
+EXPRESSIVE MARKERS FOR AUDIO:
+Include emotion and delivery markers in square brackets to guide voice expression:
+- Emotions: [thoughtful], [excited], [annoyed], [surprised], [concerned], [confident]
+- Pauses: [pause], [long pause], [brief pause]
+- Actions: [clears throat], [exhales sharply], [sighs], [chuckles]
+- Emphasis: [emphasize], [whisper], [louder]
+
+Example format: "[thoughtful] നമ്മൾ എന്താണ് ചെയ്യേണ്ടത്? [pause] ഉത്തരം ലളിതമാണ്."
 
 SCRIPT STRUCTURE:
 - Opening hook (attention-grabber that creates curiosity)
@@ -193,16 +209,17 @@ STYLE GUIDELINES:
 - Start with a question, bold statement, or surprising fact
 - Use active voice and present tense
 - Include emotional triggers (curiosity, urgency, FOMO)
+- Add expressive markers naturally throughout the script
 - End with a clear payoff or call to action
 
-Generate a complete, ready-to-record script optimized for maximum engagement.
+Generate a complete, ready-to-record script with expressive markers optimized for maximum engagement.
 `;
   }
 
   /**
    * Build YouTube analysis prompt
    */
-  private buildYouTubePrompt(url: string, tone: ScriptTone, targetDuration: number = 40): string {
+  private buildYouTubePrompt(tone: ScriptTone, targetDuration: number = 40, language?: string): string {
     const toneDescriptions = {
       professional: 'professional, clear, and authoritative',
       casual: 'friendly, conversational, and approachable',
@@ -210,18 +227,27 @@ Generate a complete, ready-to-record script optimized for maximum engagement.
       persuasive: 'compelling, persuasive, and action-oriented'
     };
 
+    const languageInstruction = language
+      ? `- Generate the script in ${language}`
+      : `- Detect the primary language of the video and generate the script in the SAME language`;
+
     return `
 You are an expert at analyzing and repurposing video content for social media.
 
 CRITICAL INSTRUCTIONS:
-1. Watch and CAREFULLY analyze the video at this URL: ${url}
+1. Watch and CAREFULLY analyze the provided YouTube video
 2. Base your script ONLY on the ACTUAL content, message, and key points from this specific video
 3. Do NOT create generic content or hallucinate information not present in the video
-4. If you cannot access the video, return an error message instead of guessing
+4. Extract the exact message, examples, and insights from what you see and hear in the video
 
 TASK: Create a viral-style narration script that accurately represents this video's message.
 
 TARGET LENGTH: Approximately ${targetDuration} seconds of narration
+
+LANGUAGE REQUIREMENTS:
+${languageInstruction}
+- Use natural, native expressions and idioms
+- Maintain the cultural context and authenticity of the original video
 
 CONTENT REQUIREMENTS:
 - Extract the SPECIFIC core message and key points from THIS video
@@ -230,12 +256,21 @@ CONTENT REQUIREMENTS:
 - Transform the message into a compelling ${targetDuration}-second narration script
 - Tone: ${toneDescriptions[tone]}
 
+EXPRESSIVE MARKERS FOR AUDIO:
+Include emotion and delivery markers in square brackets to guide voice expression:
+- Emotions: [thoughtful], [excited], [annoyed], [surprised], [concerned], [confident]
+- Pauses: [pause], [long pause], [brief pause]
+- Actions: [clears throat], [exhales sharply], [sighs], [chuckles]
+- Emphasis: [emphasize], [whisper], [louder]
+
+Example: "[thoughtful] എഐ നമ്മളെ മണ്ടന്മാരാക്കുകയാണോ? [pause] ഉത്തരം സങ്കീർണ്ണമാണ്."
+
 SCRIPT STRUCTURE:
 1. Hook (3-5 seconds): Grab attention with the video's most compelling insight
 2. Core Message (${Math.round(targetDuration * 0.7)} seconds): Deliver the key points clearly and engagingly
 3. Call-to-Action (5 seconds): Strong closing that prompts engagement
 
-Generate a script that accurately represents the video content while being optimized for social media engagement.
+Generate a script with expressive markers that accurately represents the video content while being optimized for social media engagement.
 `;
   }
 
@@ -244,7 +279,7 @@ Generate a script that accurately represents the video content while being optim
    */
   private async callGeminiAPI(prompt: string): Promise<unknown> {
     const endpoint = `${GEMINI_API_BASE}/models/${this.model}:generateContent`;
-    
+
     const response = await axios.post(
       `${endpoint}?key=${this.apiKey}`,
       {
@@ -255,9 +290,55 @@ Generate a script that accurately represents the video content while being optim
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: SCRIPT_SCHEMA,
-          temperature: 1.2, // Higher temperature for more creative, varied outputs
-          maxOutputTokens: 2048
+          responseSchema: SCRIPT_SCHEMA
+          // Temperature defaults to 1.0 (Gemini 3 recommendation)
+          // No maxOutputTokens limit to prevent response truncation
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid response from Gemini API');
+    }
+
+    return JSON.parse(response.data.candidates[0].content.parts[0].text);
+  }
+
+  /**
+   * Call the Gemini API with YouTube video URL
+   * This method passes the video URL as fileData so Gemini can actually access the video
+   */
+  private async callGeminiAPIWithVideo(prompt: string, youtubeUrl: string): Promise<unknown> {
+    const endpoint = `${GEMINI_API_BASE}/models/${this.model}:generateContent`;
+
+    const response = await axios.post(
+      `${endpoint}?key=${this.apiKey}`,
+      {
+        contents: [
+          {
+            parts: [
+              {
+                fileData: {
+                  fileUri: youtubeUrl,
+                  mimeType: 'video/youtube'
+                }
+              },
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: SCRIPT_SCHEMA
+          // Temperature defaults to 1.0 (Gemini 3 recommendation)
+          // No maxOutputTokens limit to prevent response truncation
         }
       },
       {
@@ -338,14 +419,14 @@ Generate a script that accurately represents the video content while being optim
   private handleError(error: unknown): ServiceError {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ error?: { message?: string } }>;
-      
+
       if (axiosError.response?.status === 401) {
         return {
           code: 'INVALID_API_KEY',
           message: 'Invalid Gemini API key. Please check your settings.'
         };
       }
-      
+
       if (axiosError.response?.status === 429) {
         return {
           code: 'RATE_LIMIT',

@@ -14,16 +14,18 @@ interface InputPanelProps {
 }
 
 export default function InputPanel({ onGenerate, isGenerating }: InputPanelProps) {
-  const { 
-    inputMode, 
-    inputContent, 
+  const {
+    inputMode,
+    inputContent,
     youtubeUrl,
     setInputContent,
     setYoutubeUrl,
     defaultTone,
     setDefaultTone,
     targetDuration,
-    setTargetDuration
+    setTargetDuration,
+    selectedLanguage,
+    setSelectedLanguage
   } = useStoryboardStore();
 
   const isIdea = inputMode === 'idea';
@@ -153,6 +155,52 @@ Example: Create a script about the benefits of morning routines for productivity
           <option value="casual">Casual - Conversational and friendly</option>
           <option value="persuasive">Persuasive - Compelling and action-oriented</option>
         </select>
+      </div>
+
+      {/* Language Selector */}
+      <div style={{ marginTop: '16px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: 500,
+          marginBottom: '8px',
+          color: 'var(--text-primary)'
+        }}>
+          Script Language
+        </label>
+        <select
+          value={selectedLanguage}
+          onChange={(e) => setSelectedLanguage(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            color: 'var(--text-primary)',
+            fontSize: '14px',
+            cursor: 'pointer',
+            fontFamily: 'inherit'
+          }}
+        >
+          <option value="">Auto (Match Input/Video)</option>
+          <option value="Malayalam">Malayalam</option>
+          <option value="English">English</option>
+          <option value="Hindi">Hindi</option>
+          <option value="Tamil">Tamil</option>
+          <option value="Telugu">Telugu</option>
+          <option value="Kannada">Kannada</option>
+          <option value="Arabic">Arabic</option>
+          <option value="Spanish">Spanish</option>
+          <option value="French">French</option>
+        </select>
+        <p style={{
+          marginTop: '6px',
+          fontSize: '12px',
+          color: 'var(--text-secondary)'
+        }}>
+          Select 'Auto' to keep the language of the source video or idea.
+        </p>
       </div>
 
       {/* Target Duration Input */}

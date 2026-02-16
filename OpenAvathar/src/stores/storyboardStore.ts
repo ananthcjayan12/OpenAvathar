@@ -28,6 +28,7 @@ interface StoryboardState {
   defaultVoiceId: string | null;
   defaultTone: ScriptTone;
   targetDuration: number; // Target duration in seconds
+  selectedLanguage: string; // Target language (e.g., 'Malayalam', 'English', 'Auto')
   autoSave: boolean;
 
   // Current Session
@@ -38,7 +39,7 @@ interface StoryboardState {
   // Generation State
   scriptStatus: GenerationStatus;
   audioStatus: GenerationStatus;
-  
+
   // Output
   currentScript: Script | null;
   audioUrl: string | null;
@@ -60,6 +61,7 @@ interface StoryboardState {
   setDefaultVoiceId: (id: string | null) => void;
   setDefaultTone: (tone: ScriptTone) => void;
   setTargetDuration: (duration: number) => void;
+  setSelectedLanguage: (language: string) => void;
   setAutoSave: (enabled: boolean) => void;
 
   // Actions - Input
@@ -102,6 +104,7 @@ export const useStoryboardStore = create<StoryboardState>()(
       defaultVoiceId: null,
       defaultTone: 'energetic',
       targetDuration: 40, // Default 40 seconds
+      selectedLanguage: '', // Default to empty (Auto-detect/Video Language)
       autoSave: true,
 
       // Initial State - Session
@@ -150,6 +153,7 @@ export const useStoryboardStore = create<StoryboardState>()(
       setDefaultVoiceId: (id) => set({ defaultVoiceId: id }),
       setDefaultTone: (tone) => set({ defaultTone: tone }),
       setTargetDuration: (duration) => set({ targetDuration: Math.max(10, Math.min(120, duration)) }), // Clamp between 10-120 seconds
+      setSelectedLanguage: (language) => set({ selectedLanguage: language }),
       setAutoSave: (enabled) => set({ autoSave: enabled }),
 
       // Actions - Input
@@ -162,7 +166,7 @@ export const useStoryboardStore = create<StoryboardState>()(
       setAudioStatus: (status) => set({ audioStatus: status }),
       setCurrentScript: (script) => {
         set({ currentScript: script });
-        
+
         // Auto-save if enabled
         if (script && get().autoSave) {
           get().saveScript(script);
@@ -259,6 +263,7 @@ export const useStoryboardStore = create<StoryboardState>()(
         defaultVoiceId: state.defaultVoiceId,
         defaultTone: state.defaultTone,
         targetDuration: state.targetDuration,
+        selectedLanguage: state.selectedLanguage,
         autoSave: state.autoSave,
         savedScripts: state.savedScripts,
         voices: state.voices,

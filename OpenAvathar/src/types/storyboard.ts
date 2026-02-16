@@ -52,6 +52,7 @@ export interface ScriptInput {
   content: string;
   tone?: ScriptTone;
   targetDuration?: number;
+  language?: string; // Target language for the script (e.g., 'Malayalam', 'English', 'Hindi')
 }
 
 export interface YouTubeVideoInfo {
