@@ -37,7 +37,7 @@ export class ElevenLabsService {
       );
 
       const voices = response.data.voices as Voice[];
-      
+
       return {
         success: true,
         data: voices
@@ -58,9 +58,7 @@ export class ElevenLabsService {
     options: AudioGenerationOptions
   ): Promise<GenerationResult<Blob>> {
     try {
-      const modelId = options.quality === 'production' 
-        ? 'eleven_multilingual_v2' 
-        : 'eleven_turbo_v2';
+      const modelId = 'eleven_v3';
 
       const response = await axios.post(
         `${ELEVENLABS_API_BASE}/text-to-speech/${options.voiceId}`,
@@ -85,7 +83,7 @@ export class ElevenLabsService {
       );
 
       const audioBlob = new Blob([response.data], { type: 'audio/mpeg' });
-      
+
       return {
         success: true,
         data: audioBlob
@@ -111,16 +109,16 @@ export class ElevenLabsService {
       // Split long text into chunks (ElevenLabs has a 5000 character limit per request)
       const chunks = this.splitTextIntoChunks(text, 4000);
       const audioChunks: Blob[] = [];
-      
+
       for (let i = 0; i < chunks.length; i++) {
         const result = await this.generateAudio(chunks[i], options);
-        
+
         if (!result.success || !result.data) {
           return result;
         }
-        
+
         audioChunks.push(result.data);
-        
+
         if (onProgress) {
           onProgress(((i + 1) / chunks.length) * 100);
         }
@@ -128,7 +126,7 @@ export class ElevenLabsService {
 
       // Combine all audio chunks
       const combinedBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
-      
+
       return {
         success: true,
         data: combinedBlob
@@ -213,14 +211,14 @@ export class ElevenLabsService {
   private handleError(error: unknown): ServiceError {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ detail?: { message?: string; status?: string } }>;
-      
+
       if (axiosError.response?.status === 401) {
         return {
           code: 'INVALID_API_KEY',
           message: 'Invalid ElevenLabs API key. Please check your settings.'
         };
       }
-      
+
       if (axiosError.response?.status === 429) {
         return {
           code: 'RATE_LIMIT',
