@@ -8,7 +8,8 @@ import {
     LogOut,
     X,
     Film,
-    BookOpen
+    BookOpen,
+    FileText
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useJobQueue } from '@/stores/jobQueue';
@@ -28,6 +29,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     const navItems = [
         { path: '/studio', label: 'Studio', icon: <Wand2 size={18} />, badge: pendingJobs > 0 ? pendingJobs : null },
+        { path: '/storyboard', label: 'Storyboard', icon: <FileText size={18} />, badge: 'NEW' },
         { path: '/videos', label: 'Videos', icon: <Film size={18} /> },
         { path: '/pods', label: 'Pods', icon: <Rocket size={18} /> },
     ];
