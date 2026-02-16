@@ -205,34 +205,62 @@ Example: Create a script about the benefits of morning routines for productivity
 
       {/* Target Duration Input */}
       <div style={{ marginTop: '16px' }}>
-        <label style={{
-          display: 'block',
-          fontSize: '14px',
-          fontWeight: 500,
-          marginBottom: '8px',
-          color: 'var(--text-primary)'
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '8px'
         }}>
-          Target Duration (seconds)
-        </label>
+          <label style={{
+            fontSize: '14px',
+            fontWeight: 500,
+            color: 'var(--text-primary)'
+          }}>
+            Target Duration
+          </label>
+          <span style={{
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--accent)',
+            background: 'rgba(79, 70, 229, 0.1)',
+            padding: '2px 8px',
+            borderRadius: '4px'
+          }}>
+            {targetDuration}s
+          </span>
+        </div>
         <input
-          type="number"
+          type="range"
           min="10"
           max="120"
+          step="5"
           value={targetDuration}
           onChange={(e) => setTargetDuration(Number(e.target.value))}
           style={{
             width: '100%',
-            padding: '10px 16px',
+            height: '6px',
             background: 'var(--bg-tertiary)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontSize: '14px',
-            fontFamily: 'inherit'
+            borderRadius: '3px',
+            appearance: 'none',
+            cursor: 'pointer',
+            outline: 'none',
+            marginTop: '12px',
+            marginBottom: '12px'
           }}
         />
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '10px',
+          color: 'var(--text-secondary)',
+          marginTop: '-4px'
+        }}>
+          <span>10s</span>
+          <span>60s</span>
+          <span>120s</span>
+        </div>
         <p style={{
-          marginTop: '6px',
+          marginTop: '12px',
           fontSize: '12px',
           color: 'var(--text-secondary)'
         }}>
@@ -286,7 +314,7 @@ Example: Create a script about the benefits of morning routines for productivity
         )}
       </button>
 
-      {/* Add spinning animation */}
+      {/* Add animations and slider styling */}
       <style>
         {`
           @keyframes spin {
@@ -295,6 +323,32 @@ Example: Create a script about the benefits of morning routines for productivity
           }
           .spin {
             animation: spin 1s linear infinite;
+          }
+          
+          /* Custom Slider Styling */
+          input[type=range]::-webkit-slider-thumb {
+            appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--bg-secondary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+          }
+          input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+          }
+          input[type=range]::-moz-range-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid var(--bg-secondary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
           }
         `}
       </style>
