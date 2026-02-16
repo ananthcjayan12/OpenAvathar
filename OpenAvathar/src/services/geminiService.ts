@@ -63,18 +63,29 @@ export class GeminiService {
   }
 
   /**
-   * Generate a script from user input
+   * Generate a script from user input with two-step enhancement
+   * Step 1: Generate initial script
+   * Step 2: Enhance with creative refinement
    */
   async generateScript(input: ScriptInput): Promise<GenerationResult<Script>> {
     try {
-      const prompt = this.buildPrompt(input);
-      const response = await this.callGeminiAPI(prompt);
+      // Step 1: Generate initial script
+      const initialPrompt = this.buildPrompt(input);
+      const initialResponse = await this.callGeminiAPI(initialPrompt);
+      const initialScript = this.parseResponse(initialResponse, input.tone || 'energetic');
 
-      const script = this.parseResponse(response, input.tone || 'energetic');
+      // Step 2: Enhance the script with creative refinement
+      const enhancementPrompt = this.buildEnhancementPrompt(initialScript, input);
+      const enhancedResponse = await this.callGeminiAPI(enhancementPrompt);
+      const enhancedScript = this.parseResponse(enhancedResponse, input.tone || 'energetic');
+
+      // Preserve the original ID from initial generation
+      enhancedScript.id = initialScript.id;
+      enhancedScript.metadata.createdAt = initialScript.metadata.createdAt;
 
       return {
         success: true,
-        data: script
+        data: enhancedScript
       };
     } catch (error) {
       return {
@@ -85,7 +96,9 @@ export class GeminiService {
   }
 
   /**
-   * Analyze a YouTube video and generate a script
+   * Analyze a YouTube video and generate a script with two-step enhancement
+   * Step 1: Generate initial script from video analysis
+   * Step 2: Enhance with creative refinement
    */
   async analyzeYouTubeVideo(url: string, tone: ScriptTone = 'energetic', targetDuration: number = 40, language?: string): Promise<GenerationResult<Script>> {
     try {
@@ -101,15 +114,30 @@ export class GeminiService {
         };
       }
 
-      const prompt = this.buildYouTubePrompt(tone, targetDuration, language);
-      const response = await this.callGeminiAPIWithVideo(prompt, url);
+      // Step 1: Analyze video and generate initial script
+      const initialPrompt = this.buildYouTubePrompt(tone, targetDuration, language);
+      const initialResponse = await this.callGeminiAPIWithVideo(initialPrompt, url);
+      const initialScript = this.parseResponse(initialResponse, tone);
 
+      // Step 2: Enhance the script with creative refinement
+      const input: ScriptInput = {
+        mode: 'youtube',
+        content: url,
+        tone,
+        targetDuration,
+        language
+      };
+      const enhancementPrompt = this.buildEnhancementPrompt(initialScript, input);
+      const enhancedResponse = await this.callGeminiAPI(enhancementPrompt);
+      const enhancedScript = this.parseResponse(enhancedResponse, tone);
 
-      const script = this.parseResponse(response, tone);
+      // Preserve the original ID from initial generation
+      enhancedScript.id = initialScript.id;
+      enhancedScript.metadata.createdAt = initialScript.metadata.createdAt;
 
       return {
         success: true,
-        data: script
+        data: enhancedScript
       };
     } catch (error) {
       return {
@@ -300,6 +328,70 @@ SCRIPT STRUCTURE:
 3. Call-to-Action (5 seconds): Strong closing that prompts engagement
 
 Generate a script with expressive markers that accurately represents the video content while being optimized for social media engagement.
+`;
+  }
+
+  /**
+   * Build enhancement prompt for second-pass creative refinement
+   */
+  private buildEnhancementPrompt(initialScript: Script, input: ScriptInput): string {
+    const toneDescriptions = {
+      professional: 'professional, authoritative, and informative',
+      casual: 'casual, friendly, hyper-natural, and locally relatable (use local slang naturally where it fits)',
+      energetic: 'high-energy, enthusiastic, and motivating',
+      persuasive: 'compelling, persuasive, and action-oriented'
+    };
+
+    const tone = input.tone || 'energetic';
+    const targetDuration = input.targetDuration || 30;
+    const language = input.language || 'English';
+
+    return `
+You are an expert creative content enhancer specializing in making scripts more engaging, memorable, and viral-worthy.
+
+TASK: Take the following initial script and enhance it with MORE creativity, better hooks, stronger emotional impact, and improved flow.
+
+INITIAL SCRIPT:
+Title: ${initialScript.title}
+Hook: ${initialScript.hook}
+Script: ${initialScript.narrationScript}
+
+LANGUAGE: ${language}
+
+ENHANCEMENT GOALS:
+1. HOOK IMPROVEMENT: Make the opening even MORE attention-grabbing and irresistible
+2. CREATIVE ELEMENTS: Add unexpected twists, clever analogies, or surprising perspectives
+3. EMOTIONAL DEPTH: Amplify emotional triggers (curiosity, excitement, relatability)
+4. STORYTELLING: Weave in micro-stories or vivid examples that stick in memory
+5. RHYTHM & FLOW: Improve pacing with better sentence variety and natural pauses
+6. ORIGINALITY: Make it feel fresh and unique, not formulaic
+
+MAINTAIN REQUIREMENTS:
+- Target Duration: ${targetDuration} seconds
+- Tone: ${toneDescriptions[tone]}
+- Language: ${language}
+- All TTS clarity rules and expressive markers
+- Authenticity (never sound like an ad)
+
+CREATIVE ENHANCEMENT TECHNIQUES:
+- Use metaphors, analogies, or comparisons that create vivid mental images
+- Add pattern interrupts (unexpected questions, surprising facts, plot twists)
+- Include relatable scenarios or "imagine this..." moments
+- Vary sentence length and structure for dynamic rhythm
+- Add strategic pauses and emotional markers for impact
+- Use power words that trigger emotion (discover, secret, truth, hidden, shocking, etc.)
+
+TTS CLARITY RULES (VERY IMPORTANT):
+- Keep English words in English script exactly when mixed with other languages
+- Write numbers as spoken words, not numeric digits
+- Convert decimals to spoken words (example: "2.0" -> "two point zero")
+- Never repeat the same model/term in multiple forms (avoid English + transliteration duplicates)
+- Use a single clear representation for names like versions/models (example: "Minimax M two point five" only once)
+
+EXPRESSIVE MARKERS:
+Use emotion markers generously: [thoughtful], [excited], [annoyed], [surprised], [long pause], [clears throat], [exhales sharply], [whisper], [emphasize], etc.
+
+Generate an ENHANCED version that takes the initial script to the next level of creativity and engagement while preserving its core message.
 `;
   }
 
