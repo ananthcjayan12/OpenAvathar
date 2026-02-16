@@ -162,7 +162,7 @@ Provide an improved version that addresses the feedback while maintaining the sc
   private buildPrompt(input: ScriptInput): string {
     const toneDescriptions = {
       professional: 'professional, authoritative, and informative',
-      casual: 'conversational, friendly, and relatable',
+      casual: 'casual, friendly, hyper-natural, and locally relatable (use local slang naturally where it fits)',
       energetic: 'high-energy, enthusiastic, and motivating',
       persuasive: 'compelling, persuasive, and action-oriented'
     };
@@ -191,12 +191,26 @@ REQUIREMENTS:
 5. LENGTH: Target approximately ${targetDuration} seconds of narration
 6. STRUCTURE: Clear beginning, valuable middle, strong call-to-action
 
+AUTHENTICITY RULES:
+- Sound like a real person talking, not a brand or advertisement
+- Never use ad-like language (avoid "buy now", "limited offer", "best product", "sponsored", "subscribe for discounts")
+- Keep wording natural, spoken, and culturally grounded
+- If tone is casual, lean into local slang/phrasing naturally (do not overdo it)
+
 EXPRESSIVE MARKERS FOR AUDIO:
 Include emotion and delivery markers in square brackets to guide voice expression:
 - Emotions: [thoughtful], [excited], [annoyed], [surprised], [concerned], [confident]
 - Pauses: [pause], [long pause], [brief pause]
 - Actions: [clears throat], [exhales sharply], [sighs], [chuckles]
 - Emphasis: [emphasize], [whisper], [louder]
+
+TTS CLARITY RULES (VERY IMPORTANT):
+- If a word/term is English, keep it in English script exactly (never transliterate English words)
+- Write numbers in spoken words for clean audio output (avoid numeric digits in narration)
+- For decimals, write spoken forms like "two point zero" instead of "2.0"
+- Prefer TTS-friendly pronunciation text over symbolic formatting
+- Never duplicate the same term in two formats (do NOT write English + transliteration in brackets/parentheses)
+- For model/product names, use exactly ONE representation only once (example: use "Minimax M two point five" and not "Minimax M 2.5 (എം ടു പോയിന്റ് ഫൈവ്)")
 
 Example format: "[thoughtful] നമ്മൾ എന്താണ് ചെയ്യേണ്ടത്? [pause] ഉത്തരം ലളിതമാണ്."
 
@@ -222,7 +236,7 @@ Generate a complete, ready-to-record script with expressive markers optimized fo
   private buildYouTubePrompt(tone: ScriptTone, targetDuration: number = 40, language?: string): string {
     const toneDescriptions = {
       professional: 'professional, clear, and authoritative',
-      casual: 'friendly, conversational, and approachable',
+      casual: 'casual, friendly, locally relatable, and naturally slangy where appropriate',
       energetic: 'dynamic, enthusiastic, and high-energy',
       persuasive: 'compelling, persuasive, and action-oriented'
     };
@@ -253,8 +267,16 @@ CONTENT REQUIREMENTS:
 - Extract the SPECIFIC core message and key points from THIS video
 - Identify the video's unique angle, examples, or insights
 - Preserve factual accuracy - do not invent details or examples
+- Retell the message in a fresh, original voice (do not sound copied)
+- You may add NEW relatable examples/analogies to explain the same key points better
+- Keep the final script more attractive and engaging than a plain summary
 - Transform the message into a compelling ${targetDuration}-second narration script
 - Tone: ${toneDescriptions[tone]}
+
+AUTHENTICITY + STYLE RULES:
+- Never sound like an ad, promo, or sponsorship segment
+- Use natural spoken language and avoid marketing copy
+- If tone is casual, use local slang naturally for real human vibe
 
 EXPRESSIVE MARKERS FOR AUDIO:
 Include emotion and delivery markers in square brackets to guide voice expression:
@@ -262,6 +284,13 @@ Include emotion and delivery markers in square brackets to guide voice expressio
 - Pauses: [pause], [long pause], [brief pause]
 - Actions: [clears throat], [exhales sharply], [sighs], [chuckles]
 - Emphasis: [emphasize], [whisper], [louder]
+
+TTS CLARITY RULES (VERY IMPORTANT):
+- Keep English words in English script exactly when mixed with other languages
+- Write numbers as spoken words, not numeric digits
+- Convert decimals to spoken words (example: "2.0" -> "two point zero")
+- Never repeat the same model/term in multiple forms (avoid English + transliteration duplicates)
+- Use a single clear representation for names like versions/models (example: "Minimax M two point five" only once)
 
 Example: "[thoughtful] എഐ നമ്മളെ മണ്ടന്മാരാക്കുകയാണോ? [pause] ഉത്തരം സങ്കീർണ്ണമാണ്."
 
