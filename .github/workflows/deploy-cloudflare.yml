@@ -7,6 +7,8 @@ on:
       - master
       - prod
       - v1
+      - feature/add-script-from-url
+      - copilot/refactor-storyboard-plan
   workflow_dispatch:  # Allow manual triggers
 
 env:

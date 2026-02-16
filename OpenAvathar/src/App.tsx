@@ -12,6 +12,7 @@ import DocsPage from './pages/DocsPage';
 import DeployPage from './pages/DeployPage';
 import SettingsPage from './pages/SettingsPage';
 import VideosPage from './pages/VideosPage';
+import StoryboardPage from './pages/StoryboardPage';
 import MainLayout from './components/layout/MainLayout';
 
 function App() {
@@ -111,6 +112,14 @@ function App() {
           element={
             <MainLayout>
               <GeneratePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/storyboard"
+          element={
+            <MainLayout>
+              <StoryboardPage />
             </MainLayout>
           }
         />

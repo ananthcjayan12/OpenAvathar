@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '@/stores/appStore';
-import { Key, Settings as SettingsIcon, BadgeCheck, ExternalLink } from 'lucide-react';
+import { useStoryboardStore } from '@/stores/storyboardStore';
+import { Key, Settings as SettingsIcon, BadgeCheck, ExternalLink, Sparkles } from 'lucide-react';
 import { getFingerprint } from '@/services/fingerprintService';
 import { activateLicense, checkGeneration } from '@/services/licenseService';
 
@@ -30,7 +31,16 @@ export default function SettingsPage() {
         resetsIn
     } = useAppStore();
 
+    const {
+        geminiApiKey,
+        elevenLabsApiKey,
+        setGeminiApiKey,
+        setElevenLabsApiKey
+    } = useStoryboardStore();
+
     const [localApiKey, setLocalApiKey] = useState(apiKey || '');
+    const [localGeminiKey, setLocalGeminiKey] = useState(geminiApiKey || '');
+    const [localElevenLabsKey, setLocalElevenLabsKey] = useState(elevenLabsApiKey || '');
     const [localLicenseKey, setLocalLicenseKey] = useState(licenseKey || '');
     const [licenseMessage, setLicenseMessage] = useState<string | null>(null);
     const [isActivating, setIsActivating] = useState(false);
@@ -155,6 +165,74 @@ export default function SettingsPage() {
                 {licenseMessage ? (
                     <p style={{ marginTop: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{licenseMessage}</p>
                 ) : null}
+            </div>
+
+            <div className="card glass" style={{ padding: '28px', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Sparkles size={18} /> Storyboard API Keys
+                </h2>
+                <p style={{ marginBottom: '16px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    Configure API keys for script generation (Gemini) and audio synthesis (ElevenLabs).
+                    These keys are stored locally in your browser.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '8px', color: 'var(--text-secondary)' }}>
+                            Google Gemini API Key
+                        </label>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ position: 'relative', flexGrow: 1, minWidth: '260px' }}>
+                                <Key size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                <input
+                                    type="password"
+                                    value={localGeminiKey}
+                                    onChange={(e) => setLocalGeminiKey(e.target.value)}
+                                    placeholder="Gemini API key (for script generation)"
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '12px 12px 12px 42px' }}
+                                />
+                            </div>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => setGeminiApiKey(localGeminiKey.trim() || null)}
+                            >
+                                {localGeminiKey.trim() ? 'Save Key' : 'Remove Key'}
+                            </button>
+                        </div>
+                        <p style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                            Get your free API key at <a href="https://ai.google.dev" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>ai.google.dev</a>
+                        </p>
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '8px', color: 'var(--text-secondary)' }}>
+                            ElevenLabs API Key
+                        </label>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ position: 'relative', flexGrow: 1, minWidth: '260px' }}>
+                                <Key size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                <input
+                                    type="password"
+                                    value={localElevenLabsKey}
+                                    onChange={(e) => setLocalElevenLabsKey(e.target.value)}
+                                    placeholder="ElevenLabs API key (for audio generation)"
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '12px 12px 12px 42px' }}
+                                />
+                            </div>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => setElevenLabsApiKey(localElevenLabsKey.trim() || null)}
+                            >
+                                {localElevenLabsKey.trim() ? 'Save Key' : 'Remove Key'}
+                            </button>
+                        </div>
+                        <p style={{ marginTop: '6px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                            Get your API key at <a href="https://elevenlabs.io" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>elevenlabs.io</a>
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <div className="card glass" style={{ padding: '28px', marginBottom: '24px' }}>
